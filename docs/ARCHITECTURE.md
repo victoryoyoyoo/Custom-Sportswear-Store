@@ -1,135 +1,112 @@
-# 程式架構
+# How the store is built
 
-整支程式約 4,300 行 C++，分成三層：**資料**（商品、配色、購物車）、**畫面**（五個視窗）、
-**外觀**（配色、字型、自繪元件與動畫）。畫面只讀資料、只用外觀層的元件，彼此不互相牽扯。
+About 6,700 lines: C++17 on wxWidgets 3.3 for the app, plus one Python script that draws the
+artwork. This page walks through the pieces in the order a customer meets them.
+
+## Windows
 
 ```
-CustomSportswearStore/
-├─ App.cpp              程式進入點，開啟歡迎頁
-├─ Catalog.h/.cpp       資料：商品表、配色表、優惠碼表、ShoppingCart
-├─ Personalizer.h/.cpp  客製化方式（Strategy 模式）
-├─ WelcomeFrame         歡迎頁
-├─ LauncherFrame        全部商品（8 張商品卡）
-├─ ProductFrame         單一商品頁（任何商品都用這一個類別）
-├─ ProductDialogs       尺寸建議、團體訂購兩個對話框
-├─ CartDialog           購物車、填寫資料、訂購完成、我的訂單四個對話框
-├─ SwatchPicker         色票選擇器（自繪）
-├─ Widgets              自繪元件與動畫：FlatButton、Card、ChipPicker、ProgressBar、
-│                       StepIndicator、Toast、Tween、FadeIn
-└─ Theme                配色、字型、共用版面工具、ImagePanel
+WelcomeFrame ──► LauncherFrame ──► ProductFrame ──► CartDialog ──► CheckoutDialog ──► OrderCompleteDialog
+                      │                  │
+                      └── OrdersDialog ◄─┘      (TeamOrderDialog, SizeAdvisorDialog from the product page)
 ```
 
-## 1. 資料層：商品是「資料」，不是程式碼
-
-`Catalog.cpp` 有三張表：
-
-| 表 | 一筆資料有什麼 |
+| File | What it does |
 | --- | --- |
-| `Colorways()` | 配色 id、中英文名稱、主色、配色 |
-| `Products()` | 商品 id、分類、名稱、價格、尺寸清單與說明、商品特色、客製化方式、印字位置 |
-| `Coupons()` | 優惠碼、說明、門檻（金額或件數）、折扣（金額或百分比） |
+| `App.cpp` | Starts the app and fades in the welcome window. |
+| `WelcomeFrame` | Store name and the way in, next to a jersey and a ball turning live in 3D. |
+| `LauncherFrame` | Scrolling grid of product cards, category chips, search, favourites. |
+| `ProductFrame` | One product: 360° view, colour, size, customisation, quantity, add to cart. |
+| `ProductDialogs` | Team order (a whole roster at once) and size advice. |
+| `CartDialog` | Cart, checkout form, order confirmation and order history. |
 
-畫面從這些表把東西「長」出來：全部商品頁跑 `Products()` 產生 8 張卡片，分類標籤依
-`category` 篩選；商品頁讀
-`sizes` 產生尺寸標籤、讀 `features` 產生特色清單。**新增一類商品，只要在 `Products()`
-加一筆資料，再用 `tools/gen_assets.py` 產生它的圖，畫面程式一行都不用改。**
+Only one page is on screen at a time. `Theme::ShowLike` fades the next page in with the same
+window state as the current one (normal, maximised or full screen) and hides the old one once
+the new one is visible, so the desktop never flashes in between.
 
-`ShoppingCart` 是整支程式共用的一台購物車，用函式內的 `static` 物件保證只有一個
-（`ShoppingCart::Get()`）。它負責：
+Dialogs are stack objects that belong to a page. `Theme::ShowModalDialog` counts open dialogs
+and `Theme::CanClosePage` refuses to close a page while one is open; otherwise closing the page
+from the taskbar would delete a dialog that is still running.
 
-- 加入商品時，同商品＋同配色＋同規格就合併成一列，只加數量
-- 小計、優惠折扣、運費（滿 NT$2,000 免運，看折扣前的金額）、應付總額
-- 優惠碼能不能用的判斷（`CouponProblem()`），購物車內容改變時會重新檢查
+## Data: `Catalog`
 
-`Favorites` 記錄愛心收藏的商品。`OrderHistory` 保存這次開啟程式後完成的訂單（`OrderRecord`：編號、時間、商品、金額、收件資訊），
-「我的訂單」視窗就是讀它。
+Products, colourways and coupons are tables. A product row holds everything the screens need:
 
-### 之後要接資料庫的話
-
-目前資料都在記憶體裡，程式關掉就不見。要改成資料庫時，接點只有這兩個地方：
-
-- `Catalog::Products()`、`Colorways()`、`Coupons()`：改成從資料表讀出來
-- `OrderHistory::Add()`：結帳完成時（`CartDialog::OnCheckout()`）把訂單和每一列商品寫進 orders／order_items
-
-畫面層只透過這幾個函式拿資料，所以換成資料庫之後，視窗程式不需要跟著改。
-
-## 2. 畫面流程
-
-```
-App::OnInit
-  └─ WelcomeFrame ──(進入商店)──► LauncherFrame
-                                    └─(點商品卡)──► ProductFrame
-                                                      ├─(購物車按鈕 / 通知)──► CartDialog
-                                                      │                          └─► CheckoutDialog ──► OrderCompleteDialog
-                                                      └─(返回 / ×)──► LauncherFrame
+```cpp
+struct Product {
+    wxString id, category, name, englishName, tagline;
+    int price;
+    std::vector<SizeOption> sizes;
+    Personalization personalization;   // name + number / number / text / none
+    PrintArea nameArea, numberArea, textArea;
+    Shape shape;                        // how the 360° view turns it
+    double thickness;                   // Flat: depth of the body, as a fraction of its width
+    wxString reverseArtId;              // Flat: artwork for the far side
+    RoundShape round;                   // Round: the cylinder the print wraps round
+    ...
+};
 ```
 
-- 換頁用 `Theme::ShowLike()`：新視窗用跟舊視窗一樣的狀態（一般／最大化／全螢幕）
-  淡入，淡入完成後才把舊視窗藏起來或關掉，畫面不會閃一下桌面。
-- 商品頁不管按「所有商品」還是右上角 ×，都會把全部商品頁帶回來
-  （`ProductFrame::OnClose`），不會留下一個看不見、卻讓程式一直在背景執行的視窗。
-- 購物車、填寫資料、完成、我的訂單都是 **modal 對話框**：開著的時候後面的視窗不能操作，
-  關掉後商品頁再更新右上角的購物車按鈕。
-- 對話框是建立在 stack 上的區域變數（`CartDialog dialog(this);`），在 `ShowModal()`
-  回來之前，擁有它的頁面絕對不能被刪掉，否則視窗框架會去 `delete` 一個 stack 物件。
-  滑鼠點不到被停用的頁面，但從工作列按「關閉視窗」還是會送出關閉要求，所以所有對話框都經過
-  `Theme::ShowModalDialog()` 計數，頁面的關閉事件用 `Theme::CanClosePage()` 在對話框開著時拒絕關閉。
-- 加入購物車的通知（`Toast`）比它所屬的頁面晚被刪除，所以它監聽頁面的 `wxEVT_DESTROY`，
-  頁面一消失就放開手上的指標，不會在之後碰到已經不存在的物件。
+No screen mentions a particular product. The launcher builds a card per row, the product page
+builds itself from the row, the cart stores a row index. Adding a product means adding a row and
+its artwork. The tables map directly onto database tables if the catalogue ever moves out of code.
 
-## 3. 客製化：Strategy 模式
+`ShoppingCart`, `OrderHistory` and `Favorites` are single shared instances (`Get()`), so every
+window sees the same cart. They live in memory while the app runs.
 
-商品頁不知道「背號」「刺繡」是什麼。它只跟 `Personalizer` 說三件事：
+## Customisation: `Personalizer` (Strategy)
 
-| 方法 | 做什麼 |
-| --- | --- |
-| `BuildControls()` | 在表單裡放自己需要的輸入欄位 |
-| `Describe()` | 回傳購物車上的規格文字，例如 `#23・WANG` |
-| `Draw()` | 把客製內容畫到預覽圖上 |
+Each way of customising is a subclass:
 
-四種實作：
-
-| 類別 | 用在 | 預覽圖上的樣子 |
+| Class | Used by | Inputs |
 | --- | --- | --- |
-| `NameAndNumberPersonalizer` | 球衣 | 大背號＋姓名，燙印描邊 |
-| `NumberPersonalizer` | 籃球褲 | 褲管上的背號 |
-| `TextPersonalizer` | 帽子、籃球、護腕、後背包 | 有印字位置就直接印上；沒有就在角落畫一個刺繡標籤 |
-| `Personalizer`（基底） | 球鞋、襪子 | 不客製，什麼都不畫 |
+| `NameAndNumberPersonalizer` | jersey | number, name (back), team (front) |
+| `NumberPersonalizer` | shorts | number on the leg |
+| `TextPersonalizer` | tee, hoodie, balls, cap, bands, bottle, backpack, towel | a short text |
 
-`Personalizer::For(product)` 依商品資料裡的 `personalization` 欄位挑一個。要加新的客製方式，
-新增一個子類別就好，商品頁完全不用動。
+A personalizer adds its own inputs to the product page, describes the choice for the cart line
+(`#23・WANG・正面 TIGERS`), and prints it: onto the artwork of a flat product (`Draw`), or as a
+text image (`PrintText` → `TextDecal`) that the 3D view wraps round a ball, cap or bottle. Every
+edit reports which side of the product it shows on, so the page can turn the product to face it.
 
-印字位置（`PrintArea`）用「原圖的像素座標」記在商品資料裡。預覽圖不管畫多大，
-`Draw()` 都用「實際寬度 ÷ 原圖寬度」換算，所以文字永遠落在同一個位置。
+## The 360° view: `Showcase` and `Turntable`
 
-## 4. 預覽圖與高 DPI
+`Turntable` is the widget. It keeps an angle, turns it while you drag, lets it coast with some
+friction after a flick, animates to a side on request, and plays one slow turn when the page
+opens. While anything moves it draws at half resolution; when it stops it redraws at full quality.
 
-`Theme::ImagePanel` 每次尺寸改變，就用當下的實際像素重新畫一次圖。
-視窗放大、全螢幕，或在 125%、150% 縮放的螢幕上，圖都是 1:1 的像素，不會被系統放大而糊掉。
+`Showcase` does the drawing. There is no 3D library: for every pixel it works out which point of
+the product that pixel sees, then colours and lights it. `Build` makes a `Model` for the
+product's `Shape`:
 
-圖的縮放交給 `wxGraphicsContext`（GDI+）處理，而不是 `wxImage::Scale`：後者在柔和的陰影
-漸層上會留下一圈看得見的等高線。
+| Shape | Products | How a pixel is found |
+| --- | --- | --- |
+| `Flat` | clothes, sneaker, backpack, towel | Each row of the artwork is an ellipse round a vertical axis. The line of sight meets the ellipse at an angle φ; the front artwork covers the front half, the back artwork the back half. Where the artwork would stretch across a side turned towards you, the side's own fabric colour is used instead. |
+| `Basketball`, `SoccerBall` | balls | A point on a sphere, turned back into the ball's coordinates. The basketball's channels are planes and two curved seams; the football's 32 panels are whichever of 12 pentagon and 20 hexagon centres is nearest (allowing for their different sizes). |
+| `Cap` | cap | Rays against a half-ellipsoid crown and a curved peak; six panels, stitching, eyelets, the button, the strap opening at the back. |
+| `Round` | headband, wristband, bottle | The outline doesn't change as it turns; the logo and text are wrapped round the cylinder at their own angles. |
 
-## 5. 自繪元件與動畫
+All of them use one light from the upper left, premultiplied RGBA and bilinear sampling. The
+stage behind the product (a light backdrop and a soft contact shadow) is drawn by `DrawStage` and
+`DrawShadow`; `Still` and `Tile` reuse the models for cart thumbnails and product-list cards.
 
-原生的 Windows 按鈕沒辦法改圓角、做動畫，所以按鈕、卡片、色票等都是自己畫的
-（`wxEVT_PAINT` ＋ `wxGraphicsContext`）：
+## Look and feel: `Theme`, `Widgets`, `SwatchPicker`
 
-| 元件 | 效果 |
-| --- | --- |
-| `FlatButton` | 滑鼠移上去時顏色平滑過渡；按下時縮一點；主要按鈕是膠囊形，箭頭會往前推 |
-| `Card` | 柔和的環境陰影＋淡色外框＋白色內層；可點的卡片在滑鼠移上去時浮起來 |
-| `SwatchPicker` / `ChipPicker` | 色票、尺寸標籤，支援滑鼠和方向鍵 |
-| `ProgressBar` | 免運進度條，數值改變時滑動到新位置 |
-| `StepIndicator` | 結帳三步驟 |
-| `Toast` | 加入購物車的通知，從購物車按鈕下方滑出、幾秒後淡出 |
+- `Theme`: colours, fonts, finding the `assets` folder, headers, cards, full screen, Chinese
+  confirm/notice boxes, and `ImagePanel` (a picture redrawn at the panel's real pixel size,
+  with the staggered fade-in used on the product list).
+- `Widgets`: `FlatButton`, `Card`, `ChipPicker`, `HeartToggle`, `ProgressBar`, `StepIndicator`,
+  `Toast`, all painted with `wxGraphicsContext`, and `Tween`, the small timer behind every
+  animation (eased from 0 to 1 over a set time).
+- `SwatchPicker`: the row of colour dots, with an animated selection ring.
 
-所有動畫都用同一個 `Widgets::Tween`：一個約 60 fps 的計時器，把 0 → 1 的進度套上
-減速曲線（前段快、後段慢慢停下），再交給各元件決定要變什麼（顏色、位置、透明度）。
+The app declares per-monitor DPI awareness in its manifest (set in the project's linker
+options), so Windows doesn't blur it by scaling a bitmap; sizes are written in DIPs and turned
+into pixels with `FromDIP`.
 
-## 6. 素材與打包
+## Artwork: `tools/gen_assets.py`
 
-- `tools/gen_assets.py`：用 Pillow 畫出全部 107 張圖（8 類商品 × 12 配色、商品卡、主視覺、圖示）。
-  以 3 倍大小繪製再縮小，邊緣才會平滑；商品圖事先疊在白底上，程式讀進來就不用處理透明度。
-- `tools/package.ps1`：編譯 Release 版，把 exe、`assets/`、C++ 執行階段 DLL 和說明包成 zip。
-  對方解壓縮就能執行，不需要安裝 Visual Studio。
+Pillow draws each product at 4× and scales it down for smooth edges. Products are saved at twice
+their design size as transparent cut-outs, front and back where there is one, for all 12
+colourways. The app adds the backdrop, lighting and shadow itself. Balls and the cap have no
+artwork; they are drawn in 3D and only need the store emblem (`emblem_<colourway>.png`).

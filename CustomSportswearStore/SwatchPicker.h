@@ -2,6 +2,7 @@
 #include <wx/wx.h>
 #include <functional>
 #include "Catalog.h"
+#include "Widgets.h"
 
 // A custom-drawn row of colour dots, one per colourway. wxWidgets has no
 // built-in "colour swatch picker", so this control paints the dots itself
@@ -25,5 +26,8 @@ private:
     int m_columns;
     int m_selected = 0;
     int m_hovered = -1;
+    int m_previous = -1;      // selection the ring is moving away from
+    double m_ring = 1.0;      // 0..1 progress of the selection-ring animation
+    Widgets::Tween m_ringTween;
     std::function<void(int)> m_onChange;
 };

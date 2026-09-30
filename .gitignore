@@ -11,3 +11,4 @@ dist/
 *.user
 *.filters
 __pycache__/
+wx.local.props

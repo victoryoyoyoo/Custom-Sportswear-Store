@@ -27,36 +27,34 @@ namespace Theme {
     // Visual Studio (working dir = solution dir) or by double-clicking the exe.
     wxString AssetPath(const wxString& fileName);
 
-    // Loads an asset and fits it inside a box of `maxPixels` physical pixels,
-    // keeping aspect ratio.
-    wxBitmap LoadFittedPixels(const wxString& fileName, const wxSize& maxPixels);
-
-    // Shows artwork that grows with its panel. Whenever the panel changes size
-    // the renderer is asked for a new bitmap at exactly that many physical
-    // pixels, so the picture stays sharp from a small window up to full screen.
-    // (Painting it ourselves also avoids wxStaticBitmap's high-DPI rescaling,
-    // which blurred images and drew a contour line across soft shadows.)
+    // Shows a picture that grows with its panel. Whenever the panel changes
+    // size the renderer is asked for a new bitmap at exactly that many
+    // physical pixels, so the picture stays sharp from a small window up to
+    // full screen.
     class ImagePanel : public wxPanel {
     public:
         using Renderer = std::function<wxBitmap(const wxSize& pixels)>;
         ImagePanel(wxWindow* parent, const wxSize& minDipSize, Renderer renderer);
 
-        // For a plain asset: fit `fileName` into the panel.
-        static ImagePanel* ForAsset(wxWindow* parent, const wxString& fileName, const wxSize& minDipSize);
+        // Call when what the renderer draws has changed.
+        void Rerender();
 
-        // Call when what the renderer draws has changed. With crossfade the
-        // old picture dissolves into the new one (e.g. switching colourways).
-        void Rerender(bool crossfade = false);
+        // Next time a picture is drawn, start from the background colour and
+        // fade it in after `delayMs` (staggered entrance on the product list).
+        void PlayIntro(int delayMs);
 
     private:
         void OnPaint(wxPaintEvent& event);
+        void StartCrossfade(const wxImage& from, const wxImage& to, int durationMs);
 
         Renderer m_renderer;
         wxBitmap m_bitmap;
         wxImage m_fadeFrom, m_fadeTo;   // crossfade endpoints
         bool m_pending = false;
-        bool m_pendingFade = false;
+        int m_introDelay = -1;          // >= 0 while an intro is waiting
         Widgets::Tween m_fade;
+        wxTimer m_introTimer;
+        wxImage m_introFrom, m_introTo; // what the intro fades between
     };
 
     // Keeps a sizer item (added with wxLEFT | wxRIGHT) no wider than maxDip by
@@ -69,6 +67,11 @@ namespace Theme {
     // it. ShowModalDialog counts open dialogs and CanClosePage vetoes the close
     // until they are gone.
     int ShowModalDialog(wxDialog& dialog);
+
+    // Question / notice boxes with Chinese button labels (the system ones
+    // would say Yes / No / OK). Confirm returns true for `yes`.
+    bool Confirm(wxWindow* parent, const wxString& title, const wxString& message, const wxString& yes);
+    void Inform(wxWindow* parent, const wxString& title, const wxString& message, bool warning = false);
     bool CanClosePage(wxCloseEvent& event);  // vetoes and returns false while a dialog is open
 
     // F11 toggles full screen, Esc leaves it.

@@ -17,14 +17,22 @@ public:
 
     static std::unique_ptr<Personalizer> For(const Product& product);
 
-    // Adds the input controls; onChange fires on every edit (to redraw).
-    virtual void BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void()> onChange) {}
+    // Adds the input controls. onChange fires on every edit (to redraw) and
+    // says which side of the product the edit shows on (0 = the side the
+    // page opens on, 1 = the other one), so the 360° view can turn to it.
+    virtual void BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int side)> onChange) {}
     // Text appended to the size in the cart line, e.g. "#23・WANG".
     virtual wxString Describe() const { return wxString(); }
-    // Draws onto the preview. `art` is where the product artwork was drawn
-    // (in pixels); PrintArea values are scaled from artwork units into it.
-    // `front` is true when the front view of the product is showing.
-    virtual void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, bool front) const {}
+    // Prints onto one side of a flat product's artwork. `art` is where the
+    // artwork was drawn (in pixels); PrintArea values are scaled into it.
+    virtual void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, int side) const {}
+    // What to print on a round product (ball, cap, band, bottle); the 3D
+    // view wraps it round the surface. Empty when there is nothing.
+    virtual wxString PrintText() const { return wxString(); }
+
+    // `text` drawn as a print into a transparent image `pixels` in size,
+    // as large as fits, centred.
+    static wxImage TextDecal(const wxString& text, const wxSize& pixels, const wxColour& fill, const wxColour& outline);
 
 protected:
     const Product& m_product;
@@ -37,9 +45,9 @@ public:
     // "#23・WANG・正面 TIGERS" (empty parts left out). Shared with team orders.
     static wxString Spec(int number, const wxString& name, const wxString& team);
     wxString TeamName() const;
-    void BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void()> onChange) override;
+    void BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int side)> onChange) override;
     wxString Describe() const override;
-    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, bool front) const override;
+    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, int side) const override;
 
 private:
     wxString PrintedName() const;
@@ -51,23 +59,23 @@ private:
 class NumberPersonalizer : public Personalizer {
 public:
     using Personalizer::Personalizer;
-    void BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void()> onChange) override;
+    void BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int side)> onChange) override;
     wxString Describe() const override;
-    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, bool front) const override;
+    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, int side) const override;
 
 private:
     wxSpinCtrl* m_number = nullptr;
 };
 
-// Short text. Printed straight onto the artwork when the product defines a
-// text area; otherwise (embroidery on the back of a cap, on a wristband)
-// shown as a stitched label in the corner of the preview.
+// Short text: printed into the product's text area on flat products, or
+// handed to the 3D view (PrintText) to wrap round a ball, cap or band.
 class TextPersonalizer : public Personalizer {
 public:
     using Personalizer::Personalizer;
-    void BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void()> onChange) override;
+    void BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int side)> onChange) override;
     wxString Describe() const override;
-    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, bool front) const override;
+    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, int side) const override;
+    wxString PrintText() const override;
 
 private:
     wxString Text() const;

@@ -2,108 +2,119 @@
   <img src="assets/app_logo.png" width="84" alt="">
 </p>
 
-<h1 align="center">運動用品客製購物系統<br><sub>Custom Sportswear Store</sub></h1>
+<h1 align="center">Custom Sportswear Store<br><sub>運動用品客製購物系統</sub></h1>
 
 <p align="center">
-  C++17 × wxWidgets 桌面購物系統：8 類運動商品、12 款配色，<br>
-  姓名與背號即時印在商品預覽上，從挑選、購物車到結帳一次完成。
+  A Windows desktop store for custom teamwear, written in C++17 with wxWidgets.<br>
+  14 products, 12 colourways, and a 360° view you can drag to see your name and number on the product.
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>下載 Windows 版</b></a>
+  <a href="../../releases/latest"><b>Download for Windows</b></a>
   ·
-  <a href="#建置">自己編譯</a>
+  <a href="#building">Build it yourself</a>
   ·
-  <a href="docs/ARCHITECTURE.md">程式架構</a>
+  <a href="docs/ARCHITECTURE.md">How it works</a>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/01-welcome.png" width="760" alt="歡迎頁">
+  <img src="docs/screenshots/turntable.gif" width="820" alt="Products turning in the 360° view">
 </p>
 
-## 功能
+## What's in it
 
-**逛商品**
-- 8 類商品：客製球衣、籃球褲、高筒籃球鞋、棒球帽、配色籃球、籃球襪、護腕、後背包
-- 依分類篩選：服裝／鞋款／球具／配件，也可以直接搜尋
-- 愛心收藏，收藏的商品集中在「收藏」分類
-- 12 款原創配色，色票點一下，預覽圖交叉淡入切換
-- 尺寸以膠囊標籤選擇，下方即時顯示對應的尺寸說明（胸寬、衣長、腳長……）
+**Browse**
+- 14 products in four groups: jerseys, tees, hoodies, shorts and socks; high-top sneakers;
+  a basketball and a football; caps, headbands, wristbands, a backpack, a squeeze bottle and a towel
+- Filter by group, search by name, and keep favourites under ♥
+- 12 original colourways; every product card shows two of them, drawn live
 
-**客製化與即時預覽**
-- 球衣：背號＋姓名印在背面、隊名＋小背號印在正面，可切換正反面預覽，中英文都可以
-- 團體訂購：一次輸入整隊的姓名、背號、尺寸，也能直接貼上 Excel 名單，重複背號會提醒
-- 尺寸建議：衣服依身高體重、球鞋依腳長推薦尺寸，一鍵套用
-- 籃球褲：褲管背號；籃球、後背包：印製文字；棒球帽、護腕：刺繡文字
-- 預覽圖依視窗大小重新繪製，最大化或全螢幕時一樣清晰
+**See it before you buy it**
+- Drag any product to turn it all the way round. It keeps a little momentum when you let go
+  and turns back to the front on a double-click.
+- Type a name, number or team and the product turns to where it will be printed: the back
+  of a jersey, the chest of a hoodie, the back strap of a cap, round the side of a bottle
+- Balls and the cap are drawn in real 3D (sphere and ellipsoid shading, seams, pebble grain);
+  clothes, shoes and bags wrap their front and back artwork round a rounded body
+- Team orders: enter a whole roster (or paste it from a spreadsheet), duplicate numbers are flagged
+- Size advice from height and weight, or foot length for shoes
 
-**購物車與結帳**
-- 加入購物車時，右上角購物車按鈕閃一下，並跳出通知；點通知直接開購物車
-- 購物車附商品縮圖，可以增減數量、移除、清空；相同規格自動合併
-- 訂單摘要：小計、優惠折扣、運費，以及「再買多少就免運」的進度條
-- 優惠碼：`WELCOME100`（滿 NT$1,000 折 NT$100）、`TEAM10`（5 件以上 9 折）
-- 三步驟結帳（購物車 → 填寫資料 → 完成），欄位離開時即時檢查，錯誤訊息顯示在欄位下方
-- 宅配／超商取貨，付款方式跟著切換；完成後產生訂單編號與明細
-- 「我的訂單」可以回頭查看每一筆訂單的內容與收件資訊；訂購完成頁可以把收據存成圖片
+**Cart and checkout**
+- Cart with product thumbnails, quantities, and a free-shipping progress bar
+- Coupons: `WELCOME100` (NT$100 off orders over NT$1,000) and `TEAM10` (10% off five items or more)
+- Three-step checkout with inline validation, home delivery or convenience-store pickup
+- Order confirmation you can save as an image, and an order history
 
-**介面**
-- 自繪的按鈕、卡片、色票、尺寸標籤、進度條與步驟指示，滑鼠移上去有平滑過渡
-- 換頁時視窗淡入淡出；`F11` 全螢幕、`Esc` 離開
-- 支援 125%、150% 等高 DPI 縮放
+**Feel**
+- Custom-drawn buttons, chips, swatches, cards and progress bars, with smooth transitions
+- Staggered fade-in on the product list, crossfades between colourways, a welcome screen with a
+  jersey and ball turning under a spotlight
+- `F11` for full screen; per-monitor high-DPI aware, so text and artwork stay sharp at 125–200%
 
-## 畫面
+## Screenshots
 
-| 全部商品（分類篩選） | 客製球衣（姓名、背號即時印上） |
+| Welcome | Product list |
 | :---: | :---: |
-| <img src="docs/screenshots/02-products.png" width="420"> | <img src="docs/screenshots/03-jersey.png" width="420"> |
-| **高筒籃球鞋** | **後背包（前袋印字）** |
-| <img src="docs/screenshots/04-sneaker.png" width="420"> | <img src="docs/screenshots/04b-backpack.png" width="420"> |
-| **購物車（優惠碼、免運進度）** | **填寫資料** |
-| <img src="docs/screenshots/05-cart.png" width="420"> | <img src="docs/screenshots/06-checkout.png" width="340"> |
-| **訂購完成** | **我的訂單** |
-| <img src="docs/screenshots/07-complete.png" width="300"> | <img src="docs/screenshots/08-orders.png" width="420"> |
+| <img src="docs/screenshots/01-welcome.png" width="420"> | <img src="docs/screenshots/02-products.png" width="420"> |
+| **Jersey with name and number** | **Cap, drawn in 3D** |
+| <img src="docs/screenshots/03-jersey.png" width="420"> | <img src="docs/screenshots/04-cap.png" width="420"> |
+| **Football** | **Cart** |
+| <img src="docs/screenshots/05-football.png" width="420"> | <img src="docs/screenshots/06-cart.png" width="420"> |
+| **Checkout** | **Order confirmation** |
+| <img src="docs/screenshots/07-checkout.png" width="340"> | <img src="docs/screenshots/08-complete.png" width="300"> |
+| **Order history** | |
+| <img src="docs/screenshots/09-orders.png" width="420"> | |
 
-## 架構
+## How it's put together
 
 ```
-WelcomeFrame ──► LauncherFrame（全部商品）──► ProductFrame（任一商品）
-                                                  │  └─ Personalizer（客製化方式）
-                                                  ▼
-                               CartDialog ──► CheckoutDialog ──► OrderCompleteDialog
-                               OrdersDialog（我的訂單）
+WelcomeFrame ──► LauncherFrame (product list) ──► ProductFrame (any product)
+                                                     ├─ Turntable     drag-to-turn 360° view
+                                                     └─ Personalizer  name / number / text inputs
+                                                     ▼
+                         CartDialog ──► CheckoutDialog ──► OrderCompleteDialog
+                         OrdersDialog (order history)
 
-資料   Catalog.cpp   商品、配色、優惠碼三張表 ＋ ShoppingCart ＋ OrderHistory ＋ Favorites
-外觀   Theme / Widgets / SwatchPicker   配色與字型、自繪元件、動畫
+Data     Catalog       products, colourways and coupons as tables; cart, orders, favourites
+3D       Showcase      one model per product shape: wrapped artwork, sphere, cap, cylinder
+Look     Theme / Widgets / SwatchPicker   palette, fonts, custom-drawn controls, animation
 ```
 
-- **資料驅動**：每一類商品都是 `Catalog.cpp` 裡的一筆資料（名稱、價格、尺寸、特色、印字位置）。
-  畫面沒有寫死任何商品，新增一類商品只要加一筆資料和對應的圖。
-- **Strategy 模式**：客製化方式（姓名＋背號／背號／文字／無）各自是一個 `Personalizer`
-  子類別，負責自己的輸入欄位、購物車上的規格文字，以及畫在預覽圖上的樣子。
-- **購物車單一實例**：`ShoppingCart::Get()` 讓每個畫面看到的是同一台購物車。
+- **Data-driven catalogue.** Every product is one row in `Catalog.cpp`: name, price, sizes,
+  print areas and how its 3D view turns it. No screen hard-codes a product.
+- **Strategy pattern.** Each way of customising a product (name + number, number, text, none)
+  is a `Personalizer` subclass that owns its inputs, its line in the cart and its print.
+- **No 3D engine.** `Showcase` works out every pixel itself: turn the pixel back into the
+  product's own coordinates, find which panel, seam or print it lands on, then light it.
 
-詳細說明見 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
+More detail in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## 建置
+## Building
 
-需求：Windows 10/11、Visual Studio 2026（「使用 C++ 的桌面開發」，工具組 v145）、wxWidgets 3.3。
-用 Visual Studio 2022 開啟時，在專案上按右鍵選「重新設定專案目標」改成 v143 即可。
+You need Windows 10 or 11, Visual Studio 2026 with *Desktop development with C++* (toolset v145),
+and wxWidgets 3.3. Visual Studio 2022 works too: right-click the project and retarget it to v143.
 
-1. 編譯 wxWidgets：開 `wxWidgets\build\msw\wx_vc17.sln`，分別建置 x64 的 Debug 和 Release。
-2. 開 `CustomSportswearStore.sln`。若 wxWidgets 不在 `C:\wxWidgets-3.3.3`，
-   到專案屬性修改「C/C++ → 其他 Include 目錄」、「連結器 → 其他程式庫目錄」和「資源 → 其他 Include 目錄」。
-3. 選 `x64`，按 F5 執行。
+1. Build wxWidgets: open `build\msw\wx_vc17.sln` in the wxWidgets folder and build x64 Debug and Release.
+2. Tell the project where wxWidgets is, either with a `WXWIN` environment variable or a file
+   `CustomSportswearStore\wx.local.props` (it is git-ignored):
+   ```xml
+   <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+     <PropertyGroup><WXWIN>C:\path\to\wxWidgets-3.3.3</WXWIN></PropertyGroup>
+   </Project>
+   ```
+3. Open `CustomSportswearStore.sln`, pick `x64`, press F5.
 
-打包成可以直接給別人的 zip（exe、素材、C++ 執行階段 DLL）：
+To make a zip you can hand to someone (exe, artwork and the C++ runtime):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Version v2.0.0
+powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Version v2.2.0
 ```
 
-## 素材
+## Artwork
 
-所有圖片（商品、標誌、主視覺）都是 [`tools/gen_assets.py`](tools/gen_assets.py) 用程式畫出來的原創圖，
-沒有使用照片、網路圖片或任何品牌商標。調整配色或造型後重新產生：
+Every picture is drawn by [`tools/gen_assets.py`](tools/gen_assets.py): the products, the
+colourways and the basketball mark are all original. There are no photos, downloaded images or
+third-party logos. To redraw after changing a colour or a shape:
 
 ```bash
 pip install pillow
@@ -111,13 +122,16 @@ python tools/gen_assets.py
 ```
 
 <details>
-<summary>English</summary>
+<summary>中文說明</summary>
 
-A C++17 / wxWidgets desktop store for custom basketball gear: 8 product types in 12 original
-colourways, with names and numbers rendered live onto the product preview. It has a cart with
-thumbnails, coupons and a free-shipping progress bar, a three-step checkout with inline validation,
-custom-drawn animated controls, full-screen support and high-DPI rendering. Products are rows in a
-data table (`Catalog.cpp`); customisation uses the Strategy pattern (`Personalizer`). All artwork is
-generated by `tools/gen_assets.py` — no photos or third-party marks.
+以 C++17 與 wxWidgets 寫成的 Windows 桌面購物系統，主題是運動用品客製化。
+
+- 14 項商品、12 款原創配色，分類篩選、搜尋、收藏
+- 360° 預覽：拖曳商品可以轉一整圈；輸入姓名、背號或文字時，商品會自動轉到印製的位置
+- 籃球、足球與棒球帽以即時 3D 繪製；衣服、鞋子、背包把正反面圖包覆在圓弧身體上轉動
+- 團體訂購、尺寸建議、購物車與優惠碼、三步驟結帳、訂單紀錄
+- 自繪元件與動畫、全螢幕、高 DPI 清晰顯示
+
+所有圖片都由 `tools/gen_assets.py` 以程式繪製，沒有使用照片或任何品牌商標。
 
 </details>
