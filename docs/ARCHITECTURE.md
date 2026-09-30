@@ -1,6 +1,6 @@
 # 程式架構
 
-整支程式約 3,500 行 C++，分成三層：**資料**（商品、配色、購物車）、**畫面**（五個視窗）、
+整支程式約 4,300 行 C++，分成三層：**資料**（商品、配色、購物車）、**畫面**（五個視窗）、
 **外觀**（配色、字型、自繪元件與動畫）。畫面只讀資料、只用外觀層的元件，彼此不互相牽扯。
 
 ```
@@ -11,6 +11,7 @@ CustomSportswearStore/
 ├─ WelcomeFrame         歡迎頁
 ├─ LauncherFrame        全部商品（8 張商品卡）
 ├─ ProductFrame         單一商品頁（任何商品都用這一個類別）
+├─ ProductDialogs       尺寸建議、團體訂購兩個對話框
 ├─ CartDialog           購物車、填寫資料、訂購完成、我的訂單四個對話框
 ├─ SwatchPicker         色票選擇器（自繪）
 ├─ Widgets              自繪元件與動畫：FlatButton、Card、ChipPicker、ProgressBar、
@@ -40,7 +41,7 @@ CustomSportswearStore/
 - 小計、優惠折扣、運費（滿 NT$2,000 免運，看折扣前的金額）、應付總額
 - 優惠碼能不能用的判斷（`CouponProblem()`），購物車內容改變時會重新檢查
 
-`OrderHistory` 保存這次開啟程式後完成的訂單（`OrderRecord`：編號、時間、商品、金額、收件資訊），
+`Favorites` 記錄愛心收藏的商品。`OrderHistory` 保存這次開啟程式後完成的訂單（`OrderRecord`：編號、時間、商品、金額、收件資訊），
 「我的訂單」視窗就是讀它。
 
 ### 之後要接資料庫的話
