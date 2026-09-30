@@ -104,7 +104,7 @@ private:
     Tween m_tween;
 };
 
-// "① 購物車 — ② 填寫資料 — ③ 完成" with the current step highlighted.
+// Checkout progress (購物車 > 填寫資料 > 完成訂購) with the current step highlighted.
 class StepIndicator : public wxPanel {
 public:
     StepIndicator(wxWindow* parent, const std::vector<wxString>& steps, int current);

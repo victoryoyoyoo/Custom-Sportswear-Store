@@ -64,10 +64,10 @@ namespace Theme {
     // readable width and sits in the middle instead of stretching edge to edge.
     void LimitWidth(wxWindow* host, wxSizerItem* item, int maxDip, int minMarginDip);
 
-    // Shows a modal dialog while telling every page "a dialog is open": pages
-    // refuse to close until it's gone (see CanClosePage). Closing a page from
-    // the taskbar while its dialog was up used to delete the dialog out from
-    // under ShowModal() and crash.
+    // Dialogs are stack objects owned by a page. If the page were closed from
+    // the taskbar while ShowModal() is running, wx would delete the dialog with
+    // it. ShowModalDialog counts open dialogs and CanClosePage vetoes the close
+    // until they are gone.
     int ShowModalDialog(wxDialog& dialog);
     bool CanClosePage(wxCloseEvent& event);  // vetoes and returns false while a dialog is open
 
@@ -78,8 +78,8 @@ namespace Theme {
     Widgets::FlatButton* MakeFullScreenButton(wxFrame* frame, wxWindow* parent);
 
     // Page hand-over: fades `next` in using the same window state as `current`
-    // (full screen / maximised / normal), then runs onShown — typically hiding
-    // or closing `current`, so the desktop never flashes between pages.
+    // (full screen / maximised / normal), then runs onShown, typically hiding
+    // or closing `current` so the desktop never flashes between pages.
     void ShowLike(wxFrame* next, const wxFrame* current, std::function<void()> onShown = {});
 
     // 1280 -> "NT$1,280"

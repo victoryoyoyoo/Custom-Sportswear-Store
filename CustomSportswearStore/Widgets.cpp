@@ -540,8 +540,8 @@ namespace {
         }
 
         // The page can close while the toast is still up (add to cart, then
-        // straight back to the list). The toast is deleted later than its
-        // owner, so it must let go of the owner now rather than touch it then.
+        // straight back to the list), and the toast is deleted after its owner.
+        // Drop the owner pointer here so the destructor never touches it.
         void OnOwnerDestroyed(wxWindowDestroyEvent& e) {
             if (e.GetEventObject() == m_owner) {
                 ForgetOwner();
