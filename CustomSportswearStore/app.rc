@@ -1,0 +1,7 @@
+// App icon (the first icon in the file is used by Explorer for the .exe),
+// followed by wxWidgets' standard resources: the common-controls manifest
+// (modern themed buttons/lists) and per-monitor DPI awareness.
+aaaa_app ICON "..\\assets\\app.ico"
+
+#define wxUSE_DPI_AWARE_MANIFEST 2
+#include "wx/msw/wx.rc"

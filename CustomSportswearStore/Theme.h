@@ -1,0 +1,109 @@
+#pragma once
+#include <wx/wx.h>
+#include <functional>
+#include "Widgets.h"
+
+// Shared look & feel: one palette, one font family, and a few helpers so every
+// window in the app is built from the same pieces instead of ad-hoc colours.
+namespace Theme {
+    // Palette
+    const wxColour kNavy(14, 23, 42);           // header bars, primary text on light bg
+    const wxColour kNavyLight(32, 46, 76);
+    const wxColour kOrange(242, 106, 33);       // brand accent / primary buttons
+    const wxColour kOrangeDark(214, 86, 18);
+    const wxColour kPage(243, 245, 249);        // window background
+    const wxColour kCard(255, 255, 255);        // content cards
+    const wxColour kBorder(222, 227, 235);
+    const wxColour kText(28, 36, 52);
+    const wxColour kMuted(110, 120, 138);
+    const wxColour kOnDark(255, 255, 255);
+    const wxColour kOnDarkMuted(168, 181, 204);
+    const wxColour kSuccess(22, 140, 84);
+    const wxColour kError(200, 40, 40);
+
+    wxFont Font(int pointSize, bool bold = false);
+
+    // Finds a file inside the "assets" folder whether the app is started from
+    // Visual Studio (working dir = solution dir) or by double-clicking the exe.
+    wxString AssetPath(const wxString& fileName);
+
+    // Loads an asset and fits it inside a box of `maxPixels` physical pixels,
+    // keeping aspect ratio.
+    wxBitmap LoadFittedPixels(const wxString& fileName, const wxSize& maxPixels);
+
+    // Shows artwork that grows with its panel. Whenever the panel changes size
+    // the renderer is asked for a new bitmap at exactly that many physical
+    // pixels, so the picture stays sharp from a small window up to full screen.
+    // (Painting it ourselves also avoids wxStaticBitmap's high-DPI rescaling,
+    // which blurred images and drew a contour line across soft shadows.)
+    class ImagePanel : public wxPanel {
+    public:
+        using Renderer = std::function<wxBitmap(const wxSize& pixels)>;
+        ImagePanel(wxWindow* parent, const wxSize& minDipSize, Renderer renderer);
+
+        // For a plain asset: fit `fileName` into the panel.
+        static ImagePanel* ForAsset(wxWindow* parent, const wxString& fileName, const wxSize& minDipSize);
+
+        // Call when what the renderer draws has changed. With crossfade the
+        // old picture dissolves into the new one (e.g. switching colourways).
+        void Rerender(bool crossfade = false);
+
+    private:
+        void OnPaint(wxPaintEvent& event);
+
+        Renderer m_renderer;
+        wxBitmap m_bitmap;
+        wxImage m_fadeFrom, m_fadeTo;   // crossfade endpoints
+        bool m_pending = false;
+        bool m_pendingFade = false;
+        Widgets::Tween m_fade;
+    };
+
+    // Keeps a sizer item (added with wxLEFT | wxRIGHT) no wider than maxDip by
+    // growing its side borders, so on a big or full screen the content stays a
+    // readable width and sits in the middle instead of stretching edge to edge.
+    void LimitWidth(wxWindow* host, wxSizerItem* item, int maxDip, int minMarginDip);
+
+    // Shows a modal dialog while telling every page "a dialog is open": pages
+    // refuse to close until it's gone (see CanClosePage). Closing a page from
+    // the taskbar while its dialog was up used to delete the dialog out from
+    // under ShowModal() and crash.
+    int ShowModalDialog(wxDialog& dialog);
+    bool CanClosePage(wxCloseEvent& event);  // vetoes and returns false while a dialog is open
+
+    // F11 toggles full screen, Esc leaves it.
+    void InstallFullScreenKeys(wxFrame* frame);
+
+    // Header button that toggles full screen and shows the current state.
+    Widgets::FlatButton* MakeFullScreenButton(wxFrame* frame, wxWindow* parent);
+
+    // Page hand-over: fades `next` in using the same window state as `current`
+    // (full screen / maximised / normal), then runs onShown — typically hiding
+    // or closing `current`, so the desktop never flashes between pages.
+    void ShowLike(wxFrame* next, const wxFrame* current, std::function<void()> onShown = {});
+
+    // 1280 -> "NT$1,280"
+    wxString FormatPrice(int amount);
+
+    Widgets::FlatButton* MakePrimaryButton(wxWindow* parent, const wxString& label, int pointSize = 12);
+    Widgets::FlatButton* MakeSecondaryButton(wxWindow* parent, const wxString& label, int pointSize = 11);
+    wxStaticText* MakeLabel(wxWindow* parent, const wxString& text, int pointSize,
+                            bool bold = false, const wxColour& colour = kText);
+
+    // Tiny letter-spaced tag that sits above a heading ("SHOP ALL").
+    wxWindow* MakeEyebrow(wxWindow* parent, const wxString& text);
+
+    // White rounded content card; hoverable cards lift under the mouse.
+    Widgets::Card* MakeCard(wxWindow* parent, bool hoverable = false);
+
+    // Sizes a frame/dialog to at least its content's best size.
+    void FitFrameToContent(wxTopLevelWindow* window, wxWindow* content, const wxSize& preferredDip);
+
+    // Button styled for the dark header bar (used for the cart summary).
+    Widgets::FlatButton* MakeHeaderButton(wxWindow* parent);
+
+    // Dark header bar: title + subtitle on the left; `rightSizer` (may be
+    // nullptr) receives a sizer the caller can put buttons into on the right.
+    wxPanel* MakeHeader(wxWindow* parent, const wxString& title, const wxString& subtitle,
+                        wxBoxSizer** rightSizer = nullptr);
+}
