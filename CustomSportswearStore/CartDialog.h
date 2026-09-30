@@ -5,7 +5,7 @@
 #include <vector>
 #include "Widgets.h"
 
-// "購物車  3 件｜NT$3,840" — the header button on every page.
+// Label for the header cart button on every page, e.g. "購物車  3 件｜NT$3,840".
 wxString CartButtonLabel();
 
 // Step 1: the cart. Items (with thumbnails) on the left, order summary with
