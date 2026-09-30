@@ -212,11 +212,12 @@ def on_white(img):
 # embroidery onto some of them; those positions live in Catalog.cpp and use the
 # same design units as the canvas sizes here.
 
-def jersey(fabric, trim):
-    """Basketball tank top, back view (520 x 600)."""
+def jersey(fabric, trim, front=False):
+    """Basketball tank top (520 x 600): back view, or the front with a deeper neckline."""
     c = Canvas(520, 600)
     p, s = rgb(fabric), rgb(trim)
-    neck = bez((205, 30), (260, 72), (315, 30))
+    dip = 118 if front else 72
+    neck = bez((205, 30), (260, dip), (315, 30))
     arm_r = bez((370, 30), (382, 165), (448, 205))
     arm_l = bez((72, 205), (138, 165), (150, 30))
     hem = bez((452, 560), (260, 586), (68, 560))
@@ -236,13 +237,16 @@ def jersey(fabric, trim):
         c.line(curve, s, 14)
     c.line(bez((70, 548), (260, 573), (450, 548)), shade(p, 0.78), 10)
     thread = shade(p, 1.45) if luminance(p) < 90 else shade(p, 0.6)
-    c.stitch(bez((212, 44), (260, 84), (308, 44)), thread)
+    c.stitch(bez((212, 44), (260, dip + 12), (308, 44)), thread)
     c.stitch(bez((74, 540), (260, 564), (446, 540)), thread)
     # light from the upper left, fabric folds, darker hem
     c.light(m, (140, 50, 340, 640), alpha=30, blur=40)
     c.light(m, (60, 380, 470, 700), alpha=40, blur=50, colour=(0, 0, 0))
     c.line(bez((180, 250), (200, 400), (170, 540)), shade(p, 0.9), 6)
-    c.paste(emblem(p, s, 30 * SS), (245, 62))
+    if front:
+        c.paste(emblem(p, s, 30 * SS), (104, 496))   # small tag above the hem
+    else:
+        c.paste(emblem(p, s, 30 * SS), (245, 62))    # neck tag
     return c.done()
 
 
@@ -518,6 +522,7 @@ def backpack(fabric, trim):
 
 PRODUCTS = {
     "jersey": jersey,
+    "jersey_front": lambda fabric, trim: jersey(fabric, trim, front=True),
     "shorts": shorts,
     "sneaker": sneaker,
     "cap": cap,
@@ -662,8 +667,9 @@ def main():
         for cid, _, _, fabric, trim in COLORWAYS:
             # Shown on white cards, so saved already blended onto white.
             on_white(fn(fabric, trim)).save(f"{OUT}/{name}_{cid}.png")
-        a, b = CATEGORY_PAIRS[name]
-        category_tile(name, a, b).save(f"{OUT}/category_{name}.png")
+        if name in CATEGORY_PAIRS:
+            a, b = CATEGORY_PAIRS[name]
+            category_tile(name, a, b).save(f"{OUT}/category_{name}.png")
     if not only or "banner" in only:
         banner().save(f"{OUT}/banner.png")
     if not only:
