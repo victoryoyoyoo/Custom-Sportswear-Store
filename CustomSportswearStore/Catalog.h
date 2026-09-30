@@ -1,6 +1,7 @@
 #pragma once
 #include <wx/wx.h>
 #include <wx/datetime.h>
+#include <set>
 #include <vector>
 
 // ---------------------------------------------------------------------------
@@ -29,6 +30,9 @@ struct PrintArea {
     bool IsSet() const { return height > 0; }
 };
 
+// Which "help me pick a size" tool a product offers.
+enum class SizeAdvice { None, Apparel, Shoes };
+
 enum class Personalization {
     None,
     NameAndNumber,        // jersey: name above a big number
@@ -52,6 +56,9 @@ struct Product {
     wxString textLabel;   // e.g. 刺繡文字
     double artWidth;      // design width of the artwork, for PrintArea scaling
     PrintArea nameArea, numberArea, textArea;
+    wxString frontArtId;  // non-empty: a front view exists as <frontArtId>_<colorway>.png
+    PrintArea teamArea, frontNumberArea;  // printed on the front view
+    SizeAdvice sizeAdvice = SizeAdvice::None;
 };
 
 struct Coupon {
@@ -119,6 +126,19 @@ public:
 private:
     OrderHistory() = default;
     std::vector<OrderRecord> m_orders;
+};
+
+// Products the user marked with the heart. (In memory, like the cart.)
+class Favorites {
+public:
+    static Favorites& Get();
+    bool Has(int productIndex) const { return m_items.count(productIndex) > 0; }
+    void Toggle(int productIndex);
+    const std::set<int>& Items() const { return m_items; }
+
+private:
+    Favorites() = default;
+    std::set<int> m_items;
 };
 
 // The one shopping cart shared by every window.

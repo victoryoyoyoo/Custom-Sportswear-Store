@@ -79,6 +79,7 @@ class ChipPicker : public wxPanel {
 public:
     ChipPicker(wxWindow* parent, const std::vector<wxString>& labels, int selection);
     int GetSelection() const { return m_selected; }
+    void SetSelection(int index) { Select(index); }  // fires the callback like a click
     void OnSelectionChanged(std::function<void(int)> callback) { m_onChange = std::move(callback); }
 
 private:
@@ -90,6 +91,27 @@ private:
     std::vector<wxString> m_labels;
     int m_selected, m_hovered = -1, m_chipWidth = 0;
     std::function<void(int)> m_onChange;
+};
+
+// Heart button for favourites: outline when off, filled when on, with a small
+// "pop" when it changes.
+class HeartToggle : public wxControl {
+public:
+    HeartToggle(wxWindow* parent, bool on, int sizeDip = 34);
+    bool IsOn() const { return m_on; }
+    void SetOn(bool on);  // no callback, no animation (used to sync)
+    void OnToggled(std::function<void(bool)> callback) { m_onToggle = std::move(callback); }
+
+protected:
+    wxSize DoGetBestClientSize() const override { return FromDIP(wxSize(m_sizeDip, m_sizeDip)); }
+
+private:
+    void OnPaint(wxPaintEvent& event);
+    bool m_on;
+    int m_sizeDip;
+    double m_pop = 0.0, m_hover = 0.0;
+    std::function<void(bool)> m_onToggle;
+    Tween m_popTween, m_hoverTween;
 };
 
 // Rounded progress bar whose fill glides to the new value.

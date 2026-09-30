@@ -24,6 +24,7 @@
     <ClCompile Include="Catalog.cpp" />
     <ClCompile Include="LauncherFrame.cpp" />
     <ClCompile Include="Personalizer.cpp" />
+    <ClCompile Include="ProductDialogs.cpp" />
     <ClCompile Include="ProductFrame.cpp" />
     <ClCompile Include="SwatchPicker.cpp" />
     <ClCompile Include="Theme.cpp" />
@@ -35,6 +36,7 @@
     <ClInclude Include="Catalog.h" />
     <ClInclude Include="LauncherFrame.h" />
     <ClInclude Include="Personalizer.h" />
+    <ClInclude Include="ProductDialogs.h" />
     <ClInclude Include="ProductFrame.h" />
     <ClInclude Include="SwatchPicker.h" />
     <ClInclude Include="Theme.h" />

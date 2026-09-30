@@ -5,6 +5,8 @@
 #include <wx/graphics.h>
 #include <wx/imaglist.h>
 #include <wx/statline.h>
+#include <wx/filedlg.h>
+#include <wx/stdpaths.h>
 #include <algorithm>
 #include <memory>
 #include <random>
@@ -630,14 +632,39 @@ OrderCompleteDialog::OrderCompleteDialog(wxWindow* parent, const CheckoutDialog&
     card->SetSizer(cardPad);
     root->Add(card, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(16));
 
+    wxBoxSizer* footer = new wxBoxSizer(wxHORIZONTAL);
+    auto* save = Theme::MakeSecondaryButton(this, wxT("儲存收據圖片"), 11);
+    save->SetMinSize(FromDIP(wxSize(-1, 46)));
     auto* ok = Theme::MakePrimaryButton(this, wxT("完成"), 12);
     ok->SetId(wxID_OK);
-    root->Add(ok, 0, wxEXPAND | wxALL, FromDIP(24));
+    footer->Add(save, 0, wxEXPAND | wxRIGHT, FromDIP(10));
+    footer->Add(ok, 1, wxEXPAND);
+    root->Add(footer, 0, wxEXPAND | wxALL, FromDIP(24));
+    save->Bind(wxEVT_BUTTON, [this, card, orderNumber](wxCommandEvent&) { SaveReceipt(card, orderNumber); });
     SetSizer(root);
     SetMinClientSize(wxSize(FromDIP(540), -1));
     Fit();
     CentreOnParent();
     ok->SetFocus();
+}
+
+void OrderCompleteDialog::SaveReceipt(wxWindow* receipt, const wxString& orderNumber) {
+    // Copy what's on screen for the receipt card into a bitmap, then ask where to save it.
+    const wxSize size = receipt->GetClientSize();
+    wxBitmap image(size.x, size.y, 24);
+    {
+        wxClientDC screen(receipt);
+        wxMemoryDC mem(image);
+        mem.Blit(0, 0, size.x, size.y, &screen, 0, 0);
+    }
+    wxFileDialog ask(this, wxT("儲存收據圖片"), wxStandardPaths::Get().GetUserDir(wxStandardPaths::Dir_Pictures),
+                     wxT("訂單_") + orderNumber + wxT(".png"), wxT("PNG 圖片 (*.png)|*.png"),
+                     wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+    if (ask.ShowModal() != wxID_OK) return;
+    if (image.SaveFile(ask.GetPath(), wxBITMAP_TYPE_PNG))
+        wxMessageBox(wxT("已儲存：\n") + ask.GetPath(), wxT("儲存收據"), wxOK | wxICON_INFORMATION, this);
+    else
+        wxMessageBox(wxT("無法儲存到這個位置，請換一個資料夾。"), wxT("儲存收據"), wxOK | wxICON_WARNING, this);
 }
 
 // ===========================================================================

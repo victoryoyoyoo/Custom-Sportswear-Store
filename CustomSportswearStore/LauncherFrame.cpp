@@ -3,6 +3,7 @@
 #include "Catalog.h"
 #include "ProductFrame.h"
 #include "Theme.h"
+#include <wx/srchctrl.h>
 
 LauncherFrame::LauncherFrame()
     : wxFrame(nullptr, wxID_ANY, wxT("全部商品｜運動用品客製購物系統")) {
@@ -33,8 +34,15 @@ LauncherFrame::LauncherFrame()
     heading->Add(m_count, 0, wxTOP, FromDIP(2));
     intro->Add(heading, 0, wxALIGN_BOTTOM);
     intro->AddStretchSpacer();
+    m_search = new wxSearchCtrl(root, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(200, -1)));
+    m_search->SetFont(Theme::Font(11));
+    m_search->SetDescriptiveText(wxT("搜尋商品"));
+    m_search->ShowCancelButton(true);
+    intro->Add(m_search, 0, wxALIGN_BOTTOM | wxRIGHT | wxBOTTOM, FromDIP(4));
+    intro->AddSpacer(FromDIP(12));
     std::vector<wxString> filters = { wxT("全部") };
     for (const wxString& c : Catalog::Categories()) filters.push_back(c);
+    filters.push_back(wxT("♥ 收藏"));
     auto* filter = new Widgets::ChipPicker(root, filters, 0);
     intro->Add(filter, 0, wxALIGN_BOTTOM);
     wxSizerItem* introItem = rootSizer->Add(intro, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(36));
@@ -47,6 +55,8 @@ LauncherFrame::LauncherFrame()
         m_grid->Add(m_cards.back(), 1, wxEXPAND);
     }
     m_root = root;
+    m_empty = Theme::MakeLabel(root, wxEmptyString, 11, false, Theme::kMuted);
+    rootSizer->Add(m_empty, 0, wxALIGN_CENTER | wxBOTTOM, FromDIP(8));
     wxSizerItem* gridItem = rootSizer->Add(m_grid, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(28));
     rootSizer->AddSpacer(FromDIP(14));
 
@@ -79,7 +89,15 @@ LauncherFrame::LauncherFrame()
         Theme::ShowModalDialog(dialog);
     });
     filter->OnSelectionChanged([this](int index) {
-        ApplyFilter(index == 0 ? wxString() : Catalog::Categories()[index - 1]);
+        const int categories = (int)Catalog::Categories().size();
+        m_favoritesOnly = index == categories + 1;
+        m_category = index >= 1 && index <= categories ? Catalog::Categories()[index - 1] : wxString();
+        ApplyFilter();
+    });
+    m_search->Bind(wxEVT_TEXT, [this](wxCommandEvent&) { ApplyFilter(); });
+    m_search->Bind(wxEVT_SEARCHCTRL_CANCEL_BTN, [this](wxCommandEvent&) {
+        m_search->Clear();
+        ApplyFilter();
     });
     quit->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { Close(); });
     Bind(wxEVT_CLOSE_WINDOW, [](wxCloseEvent& event) {
@@ -90,21 +108,30 @@ LauncherFrame::LauncherFrame()
         if (event.IsShown()) {
             m_opening = false;
             RefreshCartButton();
+            // A product page may have changed a favourite.
+            for (size_t i = 0; i < m_hearts.size(); ++i) m_hearts[i]->SetOn(Favorites::Get().Has((int)i));
+            ApplyFilter();
         }
         event.Skip();
     });
     RefreshCartButton();
-    ApplyFilter(wxString());
+    ApplyFilter();
 }
 
-void LauncherFrame::ApplyFilter(const wxString& category) {
+void LauncherFrame::ApplyFilter() {
     // Rebuild the grid with just the matching cards, so the remaining ones
-    // close up instead of leaving holes where hidden cards used to be.
+    // close up instead of leaving holes where hidden cards were.
+    const wxString query = m_search->GetValue().Trim().Trim(false).Lower();
     m_root->Freeze();
     m_grid->Clear(false);  // detach, don't delete
     int shown = 0;
     for (size_t i = 0; i < m_cards.size(); ++i) {
-        const bool match = category.IsEmpty() || Catalog::Products()[i].category == category;
+        const Product& p = Catalog::Products()[i];
+        bool match = m_category.IsEmpty() || p.category == m_category;
+        if (m_favoritesOnly) match = Favorites::Get().Has((int)i);
+        if (match && !query.IsEmpty())
+            match = p.name.Lower().Contains(query) || p.englishName.Lower().Contains(query) ||
+                    p.tagline.Lower().Contains(query) || p.category.Contains(query);
         m_cards[i]->Show(match);
         if (match) {
             m_grid->Add(m_cards[i], 1, wxEXPAND);
@@ -113,10 +140,17 @@ void LauncherFrame::ApplyFilter(const wxString& category) {
     }
     // Keep the grid two rows tall so a short list doesn't stretch into giant cards.
     for (int filler = shown; filler < 8; ++filler) m_grid->AddStretchSpacer();
-    m_count->SetLabel(category.IsEmpty()
-                          ? wxString::Format(wxT("%zu 類商品・%zu 款配色・可客製姓名與背號"),
-                                             Catalog::Products().size(), Catalog::Colorways().size())
-                          : wxString::Format(wxT("%s・%d 項商品"), category, shown));
+
+    m_empty->Show(shown == 0);
+    if (shown == 0)
+        m_empty->SetLabel(m_favoritesOnly && query.IsEmpty() ? wxString(wxT("還沒有收藏的商品：點商品卡右上角的愛心加入收藏"))
+                                                              : wxString(wxT("找不到符合的商品，換個關鍵字試試")));
+    wxString label = wxString::Format(wxT("%zu 類商品・%zu 款配色・可客製姓名與背號"),
+                                      Catalog::Products().size(), Catalog::Colorways().size());
+    if (m_favoritesOnly) label = wxString::Format(wxT("收藏・%d 項商品"), shown);
+    else if (!m_category.IsEmpty() || !query.IsEmpty())
+        label = wxString::Format(wxT("%s%d 項商品"), m_category.IsEmpty() ? wxString() : m_category + wxT("・"), shown);
+    m_count->SetLabel(label);
     m_root->Layout();
     m_root->Thaw();
 }
@@ -131,6 +165,13 @@ wxWindow* LauncherFrame::MakeProductCard(wxWindow* parent, int productIndex) {
     // The picture takes the spare height, so the grid fills a maximised or
     // full-screen window instead of leaving an empty band.
     auto* picture = Theme::ImagePanel::ForAsset(card, wxT("category_") + product.id + wxT(".png"), wxSize(210, 150));
+    auto* heart = new Widgets::HeartToggle(card, Favorites::Get().Has(productIndex), 30);
+    heart->SetToolTip(wxT("加入收藏"));
+    heart->OnToggled([this, productIndex](bool) {
+        Favorites::Get().Toggle(productIndex);
+        if (m_favoritesOnly) CallAfter([this] { ApplyFilter(); });
+    });
+    m_hearts.push_back(heart);
     sizer->Add(picture, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(18));
 
     wxBoxSizer* titleRow = new wxBoxSizer(wxHORIZONTAL);
@@ -141,7 +182,12 @@ wxWindow* LauncherFrame::MakeProductCard(wxWindow* parent, int productIndex) {
     sizer->AddSpacer(FromDIP(4));
     sizer->Add(Theme::MakeLabel(card, product.tagline, 10, false, Theme::kMuted), 0, wxLEFT | wxRIGHT, pad);
     sizer->AddSpacer(FromDIP(10));
-    sizer->Add(Theme::MakeLabel(card, wxT("查看商品  →"), 10, true, Theme::kOrange), 0, wxLEFT | wxRIGHT | wxBOTTOM, pad);
+    wxBoxSizer* bottom = new wxBoxSizer(wxHORIZONTAL);
+    bottom->Add(Theme::MakeLabel(card, wxT("查看商品  →"), 10, true, Theme::kOrange), 0, wxALIGN_CENTER_VERTICAL);
+    bottom->AddStretchSpacer();
+    bottom->Add(heart, 0, wxALIGN_CENTER_VERTICAL);
+    sizer->Add(bottom, 0, wxEXPAND | wxLEFT | wxRIGHT, pad);
+    sizer->AddSpacer(pad - FromDIP(6));
 
     card->SetSizer(sizer);
     card->SetToolTip(product.englishName);
@@ -150,6 +196,7 @@ wxWindow* LauncherFrame::MakeProductCard(wxWindow* parent, int productIndex) {
     auto open = [this, productIndex](wxMouseEvent&) { OpenProduct(productIndex); };
     card->Bind(wxEVT_LEFT_UP, open);
     for (wxWindow* child : card->GetChildren()) {
+        if (child == heart) continue;  // the heart has its own click
         child->SetCursor(wxCursor(wxCURSOR_HAND));
         child->Bind(wxEVT_LEFT_UP, open);
     }

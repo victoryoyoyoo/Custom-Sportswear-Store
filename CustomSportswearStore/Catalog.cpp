@@ -72,6 +72,10 @@ const std::vector<Product>& Products() {
         jersey.artWidth = 520;
         jersey.nameArea = { 260, 112, 250, 40 };
         jersey.numberArea = { 260, 174, 300, 196 };
+        jersey.frontArtId = wxT("jersey_front");
+        jersey.teamArea = { 260, 140, 300, 46 };
+        jersey.frontNumberArea = { 260, 198, 200, 122 };
+        jersey.sizeAdvice = SizeAdvice::Apparel;
         list.push_back(jersey);
 
         Product shorts{};
@@ -89,6 +93,7 @@ const std::vector<Product>& Products() {
         shorts.textLabel = wxT("褲管背號");
         shorts.artWidth = 600;
         shorts.numberArea = { 196, 318, 120, 92 };
+        shorts.sizeAdvice = SizeAdvice::Apparel;
         list.push_back(shorts);
 
         Product sneaker{};
@@ -104,6 +109,7 @@ const std::vector<Product>& Products() {
         sneaker.features = { wxT("高筒設計，穩定包覆腳踝"), wxT("緩震中底，落地更輕鬆"), wxT("耐磨橡膠大底，室內外皆適用") };
         sneaker.personalization = Personalization::None;
         sneaker.artWidth = 640;
+        sneaker.sizeAdvice = SizeAdvice::Shoes;
         list.push_back(sneaker);
 
         Product cap{};
@@ -222,6 +228,18 @@ const Coupon* FindCoupon(const wxString& code) {
 }
 
 }  // namespace Catalog
+
+// ---------------------------------------------------------------------------
+// Favorites
+// ---------------------------------------------------------------------------
+Favorites& Favorites::Get() {
+    static Favorites instance;
+    return instance;
+}
+
+void Favorites::Toggle(int productIndex) {
+    if (!m_items.erase(productIndex)) m_items.insert(productIndex);
+}
 
 // ---------------------------------------------------------------------------
 // OrderHistory

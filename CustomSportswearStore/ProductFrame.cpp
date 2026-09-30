@@ -1,5 +1,6 @@
 #include "ProductFrame.h"
 #include "CartDialog.h"
+#include "ProductDialogs.h"
 #include "SwatchPicker.h"
 #include <wx/statline.h>
 #include <algorithm>
@@ -64,9 +65,27 @@ void ProductFrame::BuildLayout() {
     // ---- left: live preview ----
     Widgets::Card* previewCard = Theme::MakeCard(root);
     wxBoxSizer* previewSizer = new wxBoxSizer(wxVERTICAL);
-    m_preview = new Theme::ImagePanel(previewCard, wxSize(340, 340),
+
+    // Top row: back/front switch (jersey only) on the left, favourite heart on the right.
+    wxBoxSizer* previewTop = new wxBoxSizer(wxHORIZONTAL);
+    if (!product.frontArtId.IsEmpty()) {
+        auto* view = new Widgets::ChipPicker(previewCard, { wxT("背面"), wxT("正面") }, 0);
+        previewTop->Add(view, 0, wxALIGN_CENTER_VERTICAL);
+        view->OnSelectionChanged([this](int index) {
+            m_front = index == 1;
+            RefreshPreview(true);
+        });
+    }
+    previewTop->AddStretchSpacer();
+    m_heart = new Widgets::HeartToggle(previewCard, Favorites::Get().Has(m_productIndex));
+    m_heart->SetToolTip(wxT("加入收藏"));
+    m_heart->OnToggled([this](bool) { Favorites::Get().Toggle(m_productIndex); });
+    previewTop->Add(m_heart, 0, wxALIGN_CENTER_VERTICAL);
+    previewSizer->Add(previewTop, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(20));
+
+    m_preview = new Theme::ImagePanel(previewCard, wxSize(340, 320),
                                       [this](const wxSize& px) { return RenderPreview(px); });
-    previewSizer->Add(m_preview, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(kPad));
+    previewSizer->Add(m_preview, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(12));
     m_previewTitle = Theme::MakeLabel(previewCard, wxEmptyString, 16, true);
     m_previewSubtitle = Theme::MakeLabel(previewCard, wxEmptyString, 10, false, Theme::kMuted);
     previewSizer->Add(m_previewTitle, 0, wxALIGN_CENTER | wxTOP, FromDIP(10));
@@ -92,7 +111,19 @@ void ProductFrame::BuildLayout() {
         std::vector<wxString> labels;
         for (const SizeOption& s : product.sizes) labels.push_back(s.label);
         m_sizes = new Widgets::ChipPicker(m_formCard, labels, product.defaultSize);
-        form->Add(m_sizes, 0, wxLEFT | wxRIGHT, FromDIP(kPad));
+        wxBoxSizer* sizeRow = new wxBoxSizer(wxHORIZONTAL);
+        sizeRow->Add(m_sizes, 0, wxALIGN_CENTER_VERTICAL);
+        if (product.sizeAdvice != SizeAdvice::None) {
+            sizeRow->AddStretchSpacer();
+            auto* advice = Theme::MakeSecondaryButton(m_formCard, wxT("尺寸建議"), 10);
+            advice->SetMinSize(FromDIP(wxSize(-1, 36)));
+            sizeRow->Add(advice, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(12));
+            advice->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+                SizeAdvisorDialog dialog(this, GetProduct());
+                if (Theme::ShowModalDialog(dialog) == wxID_OK) m_sizes->SetSelection(dialog.Recommended());
+            });
+        }
+        form->Add(sizeRow, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(kPad));
         form->AddSpacer(FromDIP(8));
         m_sizes->OnSelectionChanged([this](int) { RefreshPreview(); });
     }
@@ -142,7 +173,16 @@ void ProductFrame::BuildLayout() {
     auto* add = Theme::MakePrimaryButton(m_formCard, wxT("加入購物車"), 13);
     add->ShowArrow();
     form->AddSpacer(FromDIP(16));
-    form->Add(add, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(kPad));
+    wxBoxSizer* actions = new wxBoxSizer(wxHORIZONTAL);
+    actions->Add(add, 1, wxEXPAND);
+    if (product.personalization == Personalization::NameAndNumber) {
+        auto* team = Theme::MakeSecondaryButton(m_formCard, wxT("團體訂購"), 11);
+        team->SetMinSize(FromDIP(wxSize(120, 46)));
+        team->SetToolTip(wxT("一次輸入整隊的姓名、背號與尺寸"));
+        actions->Add(team, 0, wxEXPAND | wxLEFT, FromDIP(10));
+        team->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnTeamOrder(); });
+    }
+    form->Add(actions, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(kPad));
     form->AddSpacer(FromDIP(kPad));
 
     body->Add(m_formCard, 5, wxEXPAND);
@@ -189,7 +229,8 @@ wxBitmap ProductFrame::RenderPreview(const wxSize& pixels) const {
         dc.SetBackground(wxBrush(Theme::kCard));
         dc.Clear();
         std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
-        wxImage art(Theme::AssetPath(product.id + wxT("_") + colorway.id + wxT(".png")), wxBITMAP_TYPE_PNG);
+        const wxString artId = m_front ? product.frontArtId : product.id;
+        wxImage art(Theme::AssetPath(artId + wxT("_") + colorway.id + wxT(".png")), wxBITMAP_TYPE_PNG);
         if (gc && art.IsOk()) {
             const double fit = std::min((double)pixels.x / art.GetWidth(), (double)pixels.y / art.GetHeight());
             const double w = art.GetWidth() * fit, h = art.GetHeight() * fit;
@@ -198,7 +239,7 @@ wxBitmap ProductFrame::RenderPreview(const wxSize& pixels) const {
             // contour line across the soft shadows. Overdraw 1px at the edges.
             gc->SetInterpolationQuality(wxINTERPOLATION_BEST);
             gc->DrawBitmap(wxBitmap(art), area.m_x - 1, area.m_y - 1, w + 2, h + 2);
-            m_personalizer->Draw(gc.get(), area, colorway);
+            m_personalizer->Draw(gc.get(), area, colorway, m_front);
         }
     }
     return canvas;
@@ -254,6 +295,24 @@ void ProductFrame::OnAddToCart() {
     Widgets::ShowToast(this, wxT("已加入購物車"),
                        wxString::Format(wxT("%s（%s）× %d・點此查看"), item.Title(), item.spec, item.quantity),
                        [this] { OpenCart(); });
+}
+
+void ProductFrame::OnTeamOrder() {
+    auto* jersey = dynamic_cast<NameAndNumberPersonalizer*>(m_personalizer.get());
+    TeamOrderDialog dialog(this, GetProduct(), CurrentColorway(), jersey ? jersey->TeamName() : wxString());
+    if (Theme::ShowModalDialog(dialog) != wxID_OK) return;
+
+    const auto players = dialog.Players();
+    for (const auto& p : players) {
+        const wxString spec = GetProduct().sizes[p.sizeIndex].label + wxT("・") +
+                              NameAndNumberPersonalizer::Spec(p.number, p.name, dialog.TeamName());
+        ShoppingCart::Get().Add({ m_productIndex, m_swatches->GetSelection(), spec, GetProduct().price, 1 });
+    }
+    RefreshCartButton();
+    m_cartButton->Flash(Theme::kOrange);
+    const wxString team = dialog.TeamName().IsEmpty() ? wxString(wxT("團體訂購")) : dialog.TeamName();
+    Widgets::ShowToast(this, wxString::Format(wxT("已加入 %zu 件球衣"), players.size()),
+                       CurrentColorway().name + wxT("・") + team + wxT("・點此查看購物車"), [this] { OpenCart(); });
 }
 
 void ProductFrame::OpenCart() {

@@ -29,6 +29,7 @@ private:
     void RefreshCartButton();
     void SetQuantity(int quantity);
     void OnAddToCart();
+    void OnTeamOrder();
     void OpenCart();
     void OnClose(wxCloseEvent& event);
 
@@ -36,6 +37,7 @@ private:
     std::unique_ptr<Personalizer> m_personalizer;
     int m_quantity = 1;
     bool m_closing = false;
+    bool m_front = false;  // showing the front view (jersey)
 
     wxPanel* m_root = nullptr;
     wxPanel* m_formCard = nullptr;
@@ -52,4 +54,5 @@ private:
     Widgets::FlatButton* m_minus = nullptr;
     Widgets::FlatButton* m_plus = nullptr;
     Widgets::FlatButton* m_cartButton = nullptr;
+    Widgets::HeartToggle* m_heart = nullptr;
 };

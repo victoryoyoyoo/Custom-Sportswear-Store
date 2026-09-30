@@ -372,6 +372,70 @@ void ChipPicker::OnPaint(wxPaintEvent&) {
 }
 
 // ---------------------------------------------------------------------------
+// HeartToggle
+// ---------------------------------------------------------------------------
+HeartToggle::HeartToggle(wxWindow* parent, bool on, int sizeDip)
+    : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE), m_on(on), m_sizeDip(sizeDip) {
+    SetBackgroundStyle(wxBG_STYLE_PAINT);
+    SetCursor(wxCursor(wxCURSOR_HAND));
+    SetInitialSize();
+    Bind(wxEVT_PAINT, &HeartToggle::OnPaint, this);
+    auto hoverTo = [this](double target) {
+        const double from = m_hover;
+        m_hoverTween.Start(160, [this, from, target](double t) { m_hover = from + (target - from) * t; Refresh(); });
+    };
+    Bind(wxEVT_ENTER_WINDOW, [hoverTo](wxMouseEvent&) { hoverTo(1.0); });
+    Bind(wxEVT_LEAVE_WINDOW, [hoverTo](wxMouseEvent&) { hoverTo(0.0); });
+    Bind(wxEVT_LEFT_UP, [this](wxMouseEvent&) {
+        m_on = !m_on;
+        m_popTween.Start(320, [this](double t) {
+            m_pop = std::sin(t * 3.14159265358979);  // up and back down
+            Refresh();
+        });
+        if (m_onToggle) m_onToggle(m_on);
+    });
+    // Clicks on the heart shouldn't also count as clicks on whatever it sits on.
+    Bind(wxEVT_LEFT_DOWN, [](wxMouseEvent&) {});
+}
+
+void HeartToggle::SetOn(bool on) {
+    if (on == m_on) return;
+    m_on = on;
+    Refresh();
+}
+
+void HeartToggle::OnPaint(wxPaintEvent&) {
+    wxAutoBufferedPaintDC dc(this);
+    auto gc = BeginPaint(this, dc);
+    if (!gc) return;
+    const wxSize s = GetClientSize();
+    const double d = std::min(s.x, s.y) - 2.0;
+    const double cx = s.x / 2.0, cy = s.y / 2.0;
+
+    gc->SetPen(wxPen(Mix(Theme::kBorder, wxColour(230, 60, 80), m_hover * 0.6), 1));
+    gc->SetBrush(wxBrush(*wxWHITE));
+    gc->DrawEllipse(cx - d / 2, cy - d / 2, d, d);
+
+    // Heart made of two arcs and a point, scaled up a little while it "pops".
+    const double r = d * 0.15 * (1.0 + 0.25 * m_pop);
+    const double top = cy - r * 0.55;
+    wxGraphicsPath heart = gc->CreatePath();
+    heart.MoveToPoint(cx, cy + r * 2.0);
+    heart.AddCurveToPoint(cx - r * 2.6, cy + r * 0.2, cx - r * 1.9, top - r * 1.6, cx, top - r * 0.2);
+    heart.AddCurveToPoint(cx + r * 1.9, top - r * 1.6, cx + r * 2.6, cy + r * 0.2, cx, cy + r * 2.0);
+    heart.CloseSubpath();
+    const wxColour red(230, 60, 80);
+    if (m_on) {
+        gc->SetPen(*wxTRANSPARENT_PEN);
+        gc->SetBrush(wxBrush(red));
+    } else {
+        gc->SetPen(wxPen(Mix(Theme::kMuted, red, m_hover), FromDIP(2)));
+        gc->SetBrush(*wxTRANSPARENT_BRUSH);
+    }
+    gc->DrawPath(heart);
+}
+
+// ---------------------------------------------------------------------------
 // ProgressBar
 // ---------------------------------------------------------------------------
 ProgressBar::ProgressBar(wxWindow* parent) : wxPanel(parent, wxID_ANY) {
