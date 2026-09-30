@@ -3,6 +3,7 @@
 #include <wx/stdpaths.h>
 #include <wx/dcbuffer.h>
 #include <wx/graphics.h>
+#include <cmath>
 #include <memory>
 #include <algorithm>
 
@@ -33,102 +34,82 @@ wxString AssetPath(const wxString& fileName) {
     return wxT("assets") + wxString(wxFILE_SEP_PATH) + fileName;
 }
 
-wxBitmap LoadFittedPixels(const wxString& fileName, const wxSize& maxPixels) {
-    const int maxW = std::max(1, maxPixels.GetWidth());
-    const int maxH = std::max(1, maxPixels.GetHeight());
-
-    wxImage img(AssetPath(fileName), wxBITMAP_TYPE_PNG);
-    if (!img.IsOk()) {
-        // Missing asset: show a neutral placeholder instead of crashing.
-        wxImage blank(maxW, maxH);
-        blank.SetRGB(wxRect(0, 0, maxW, maxH), kBorder.Red(), kBorder.Green(), kBorder.Blue());
-        return wxBitmap(blank);
-    }
-    const double ratio = std::min((double)maxW / img.GetWidth(), (double)maxH / img.GetHeight());
-    const int w = std::max(1, (int)(img.GetWidth() * ratio));
-    const int h = std::max(1, (int)(img.GetHeight() * ratio));
-
-    // Resample through the graphics backend rather than wxImage::Rescale,
-    // which leaves contour lines across smooth gradients (soft shadows, glows).
-    wxBitmap result(w, h, 24);
-    {
-        wxMemoryDC dc(result);
-        dc.SetBackground(wxBrush(kCard));
-        dc.Clear();
-        std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
-        if (gc) {
-            gc->SetInterpolationQuality(wxINTERPOLATION_BEST);
-            // Overdraw by 1px on every side: the resampler blends edge pixels
-            // with the background, which otherwise shows as a thin light border.
-            gc->DrawBitmap(wxBitmap(img), -1, -1, w + 2, h + 2);
-        }
-    }
-    return result;
-}
-
 ImagePanel::ImagePanel(wxWindow* parent, const wxSize& minDipSize, Renderer renderer)
     : wxPanel(parent, wxID_ANY), m_renderer(std::move(renderer)) {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     SetMinSize(FromDIP(minDipSize));
     Bind(wxEVT_PAINT, &ImagePanel::OnPaint, this);
+    m_introTimer.Bind(wxEVT_TIMER, [this](wxTimerEvent&) { StartCrossfade(m_introFrom, m_introTo, 380); });
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
         Rerender();
         event.Skip();
     });
 }
 
-ImagePanel* ImagePanel::ForAsset(wxWindow* parent, const wxString& fileName, const wxSize& minDipSize) {
-    return new ImagePanel(parent, minDipSize, [fileName](const wxSize& px) { return LoadFittedPixels(fileName, px); });
-}
-
 void ImagePanel::OnPaint(wxPaintEvent&) {
     wxAutoBufferedPaintDC dc(this);
     dc.SetBackground(wxBrush(GetParent()->GetBackgroundColour()));
     dc.Clear();
-    if (m_bitmap.IsOk()) {
-        const wxSize area = GetClientSize();
+    const wxSize area = GetClientSize();
+    if (m_bitmap.IsOk())
         dc.DrawBitmap(m_bitmap, (area.x - m_bitmap.GetWidth()) / 2, (area.y - m_bitmap.GetHeight()) / 2);
-    }
 }
 
-void ImagePanel::Rerender(bool crossfade) {
-    // A resize or a burst of keystrokes can ask many times in a row; render
-    // once, after the current events have been handled.
-    m_pendingFade = m_pendingFade || crossfade;
+void ImagePanel::StartCrossfade(const wxImage& from, const wxImage& to, int durationMs) {
+    m_fadeFrom = from;
+    m_fadeTo = to;
+    m_fade.Start(durationMs, [this](double t) {
+        // Blend the two frames pixel by pixel.
+        wxImage frame(m_fadeTo.GetWidth(), m_fadeTo.GetHeight(), false);
+        const unsigned char* a = m_fadeFrom.GetData();
+        const unsigned char* b = m_fadeTo.GetData();
+        unsigned char* out = frame.GetData();
+        const int wt = (int)(t * 256);
+        const size_t n = (size_t)frame.GetWidth() * frame.GetHeight() * 3;
+        for (size_t i = 0; i < n; ++i) out[i] = (unsigned char)((a[i] * (256 - wt) + b[i] * wt) >> 8);
+        m_bitmap = wxBitmap(frame);
+        Refresh(false);
+    }, [this] {
+        m_bitmap = wxBitmap(m_fadeTo);
+        m_fadeFrom = m_fadeTo = wxImage();
+        Refresh(false);
+    });
+}
+
+void ImagePanel::PlayIntro(int delayMs) {
+    m_introDelay = std::max(0, delayMs);
+    Rerender();
+}
+
+void ImagePanel::Rerender() {
+    // A resize can ask many times in a row; render once, after the current
+    // events have been handled.
     if (m_pending) return;
     m_pending = true;
     CallAfter([this] {
         m_pending = false;
-        const bool fade = m_pendingFade;
-        m_pendingFade = false;
         const wxSize area = GetClientSize();
         if (area.x < 8 || area.y < 8 || !m_renderer) return;
         wxBitmap next = m_renderer(area);
 
-        if (!fade || !m_bitmap.IsOk() || m_bitmap.GetSize() != next.GetSize()) {
+        if (m_introDelay >= 0) {
+            // Show the plain background now, fade the picture in after the delay.
+            const int delay = m_introDelay;
+            m_introDelay = -1;
             m_fade.Stop();
-            m_bitmap = next;
-            Refresh();
+            wxImage blank(next.GetWidth(), next.GetHeight());
+            const wxColour bg = GetParent()->GetBackgroundColour();
+            blank.SetRGB(wxRect(0, 0, blank.GetWidth(), blank.GetHeight()), bg.Red(), bg.Green(), bg.Blue());
+            m_bitmap = wxBitmap(blank);
+            Refresh(false);
+            m_introFrom = blank;
+            m_introTo = next.ConvertToImage();
+            m_introTimer.StartOnce(std::max(1, delay));
             return;
         }
-        // Dissolve: blend the two frames pixel by pixel on every tick.
-        m_fadeFrom = m_bitmap.ConvertToImage();
-        m_fadeTo = next.ConvertToImage();
-        m_fade.Start(200, [this](double t) {
-            wxImage frame(m_fadeTo.GetWidth(), m_fadeTo.GetHeight(), false);
-            const unsigned char* a = m_fadeFrom.GetData();
-            const unsigned char* b = m_fadeTo.GetData();
-            unsigned char* out = frame.GetData();
-            const int wt = (int)(t * 256);
-            const size_t n = (size_t)frame.GetWidth() * frame.GetHeight() * 3;
-            for (size_t i = 0; i < n; ++i) out[i] = (unsigned char)((a[i] * (256 - wt) + b[i] * wt) >> 8);
-            m_bitmap = wxBitmap(frame);
-            Refresh(false);
-        }, [this] {
-            m_bitmap = wxBitmap(m_fadeTo);
-            m_fadeFrom = m_fadeTo = wxImage();
-            Refresh(false);
-        });
+        m_fade.Stop();
+        m_bitmap = next;
+        Refresh();
     });
 }
 
@@ -150,6 +131,18 @@ int ShowModalDialog(wxDialog& dialog) {
     const int result = dialog.ShowModal();
     --g_openDialogs;
     return result;
+}
+
+bool Confirm(wxWindow* parent, const wxString& title, const wxString& message, const wxString& yes) {
+    wxMessageDialog dialog(parent, message, title, wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION);
+    dialog.SetYesNoLabels(yes, wxT("取消"));
+    return ShowModalDialog(dialog) == wxID_YES;
+}
+
+void Inform(wxWindow* parent, const wxString& title, const wxString& message, bool warning) {
+    wxMessageDialog dialog(parent, message, title, wxOK | (warning ? wxICON_WARNING : wxICON_INFORMATION));
+    dialog.SetOKLabel(wxT("好"));
+    ShowModalDialog(dialog);
 }
 
 bool CanClosePage(wxCloseEvent& event) {

@@ -1,7 +1,8 @@
 #pragma once
 #include <wx/wx.h>
 
-// Landing window: brand artwork + "enter store" button.
+// Landing window: the store name and a way in, next to a jersey and a ball
+// turning in 3D.
 class WelcomeFrame : public wxFrame {
 public:
     explicit WelcomeFrame(const wxString& title);

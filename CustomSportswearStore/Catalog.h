@@ -40,8 +40,26 @@ enum class Personalization {
     Text,                 // embroidery / print of a short text
 };
 
+// How the product page's 360° view turns the product round.
+enum class Shape {
+    Flat,                 // clothes, shoes, bags: front and back artwork wrapped round the body
+    Basketball,           // drawn as a real sphere, seams and all
+    SoccerBall,
+    Cap,                  // drawn in 3D: crown, peak, strap at the back
+    Round,                // bottle or band: the outline stays, the print travels round it
+};
+
+// A Round product's cylinder, in artwork units.
+struct RoundShape {
+    double centerX = 0, radius = 0;
+    double sag = 0;               // how far a ring round it dips at the front (seen from a little above)
+    double emblemY = 0, emblemSize = 0;              // centre height and size of the logo
+    double textY = 0, textHeight = 0, textWidth = 0; // printed text: centre height, height, arc length
+    double textTurn = 0;          // where round the text goes, in radians from the logo
+};
+
 struct Product {
-    wxString id;          // art: <id>_<colorway>.png, category_<id>.png
+    wxString id;          // art: <id>_<colorway>.png
     wxString category;    // 服裝 / 鞋款 / 球具 / 配件, for the filter on the product list
     wxString name;
     wxString englishName;
@@ -56,9 +74,17 @@ struct Product {
     wxString textLabel;   // e.g. 刺繡文字
     double artWidth;      // design width of the artwork, for PrintArea scaling
     PrintArea nameArea, numberArea, textArea;
-    wxString frontArtId;  // non-empty: a front view exists as <frontArtId>_<colorway>.png
-    PrintArea teamArea, frontNumberArea;  // printed on the front view
+    int printSide = 0;    // Number / Text print: 0 = the side the page opens on, 1 = the reverse
+    bool printOnTrim = false;  // text sits on a trim-coloured panel, so it's printed in the fabric colour
+    PrintArea teamArea, frontNumberArea;  // jersey: printed on the reverse (the front of the shirt)
     SizeAdvice sizeAdvice = SizeAdvice::None;
+
+    Shape shape = Shape::Flat;
+    double thickness = 0.45;  // Flat: how deep the product is, as a fraction of its width
+    wxString reverseArtId;    // Flat: <reverseArtId>_<colorway>.png is the other side; empty = mirror image
+    wxString sideNames[2];    // Flat with reverse art: labels of the two sides, e.g. 背面 / 正面
+    RoundShape round;         // Round only
+    wxString tileColorways[2];  // the two colourways posed on the product-list card
 };
 
 struct Coupon {

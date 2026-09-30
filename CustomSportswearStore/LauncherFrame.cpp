@@ -1,8 +1,10 @@
 #include "LauncherFrame.h"
+#include "Showcase.h"
 #include "CartDialog.h"
 #include "Catalog.h"
 #include "ProductFrame.h"
 #include "Theme.h"
+#include <wx/weakref.h>
 #include <wx/srchctrl.h>
 
 LauncherFrame::LauncherFrame()
@@ -48,16 +50,32 @@ LauncherFrame::LauncherFrame()
     wxSizerItem* introItem = rootSizer->Add(intro, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(36));
     rootSizer->AddSpacer(FromDIP(14));
 
+    // The cards scroll under the fixed header and filters.
     const int count = (int)Catalog::Products().size();
+    m_scroll = new wxScrolledWindow(root, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxBORDER_NONE);
+    m_scroll->SetBackgroundColour(Theme::kPage);
+    m_scroll->SetScrollRate(0, FromDIP(24));
     m_grid = new wxGridSizer(0, 4, FromDIP(4), FromDIP(4));
     for (int i = 0; i < count; ++i) {
-        m_cards.push_back(MakeProductCard(root, i));
+        m_cards.push_back(MakeProductCard(m_scroll, i));
         m_grid->Add(m_cards.back(), 1, wxEXPAND);
     }
+    wxBoxSizer* scrollSizer = new wxBoxSizer(wxVERTICAL);
+    scrollSizer->Add(m_grid, 0, wxEXPAND | wxBOTTOM, FromDIP(6));
+    m_scroll->SetSizer(scrollSizer);
+    // Pictures keep the card's proportions as the columns get wider.
+    m_scroll->Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
+        const int column = (m_scroll->GetClientSize().x - FromDIP(12)) / 4 - FromDIP(36);
+        const int height = std::max(FromDIP(150), column * 64 / 100);
+        for (Theme::ImagePanel* picture : m_pictures)
+            if (picture->GetMinSize().y != height) picture->SetMinSize(wxSize(FromDIP(210), height));
+        m_scroll->FitInside();
+        event.Skip();
+    });
     m_root = root;
     m_empty = Theme::MakeLabel(root, wxEmptyString, 11, false, Theme::kMuted);
     rootSizer->Add(m_empty, 0, wxALIGN_CENTER | wxBOTTOM, FromDIP(8));
-    wxSizerItem* gridItem = rootSizer->Add(m_grid, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(28));
+    wxSizerItem* gridItem = rootSizer->Add(m_scroll, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(28));
     rootSizer->AddSpacer(FromDIP(14));
 
     wxBoxSizer* footer = new wxBoxSizer(wxHORIZONTAL);
@@ -76,7 +94,7 @@ LauncherFrame::LauncherFrame()
     Theme::LimitWidth(root, introItem, 1392, 36);
     Theme::LimitWidth(root, gridItem, 1400, 28);
     Theme::LimitWidth(root, footerItem, 1392, 36);
-    Theme::FitFrameToContent(this, root, wxSize(1180, 780));
+    Theme::FitFrameToContent(this, root, wxSize(1180, 820));
     Centre();
 
     m_cartButton->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
@@ -106,7 +124,6 @@ LauncherFrame::LauncherFrame()
     // Coming back from a product page: the cart may have changed there.
     Bind(wxEVT_SHOW, [this](wxShowEvent& event) {
         if (event.IsShown()) {
-            m_opening = false;
             RefreshCartButton();
             // A product page may have changed a favourite.
             for (size_t i = 0; i < m_hearts.size(); ++i) m_hearts[i]->SetOn(Favorites::Get().Has((int)i));
@@ -122,9 +139,9 @@ void LauncherFrame::ApplyFilter() {
     // Rebuild the grid with just the matching cards, so the remaining ones
     // close up instead of leaving holes where hidden cards were.
     const wxString query = m_search->GetValue().Trim().Trim(false).Lower();
-    m_root->Freeze();
-    m_grid->Clear(false);  // detach, don't delete
-    int shown = 0;
+    // Work out which cards match first, so the entrance animation only plays
+    // when the set actually changes (not on every keystroke or page return).
+    std::vector<bool> matches(m_cards.size());
     for (size_t i = 0; i < m_cards.size(); ++i) {
         const Product& p = Catalog::Products()[i];
         bool match = m_category.IsEmpty() || p.category == m_category;
@@ -132,18 +149,28 @@ void LauncherFrame::ApplyFilter() {
         if (match && !query.IsEmpty())
             match = p.name.Lower().Contains(query) || p.englishName.Lower().Contains(query) ||
                     p.tagline.Lower().Contains(query) || p.category.Contains(query);
-        m_cards[i]->Show(match);
-        if (match) {
-            m_grid->Add(m_cards[i], 1, wxEXPAND);
-            ++shown;
-        }
+        matches[i] = match;
     }
-    // Keep the grid two rows tall so a short list doesn't stretch into giant cards.
-    for (int filler = shown; filler < 8; ++filler) m_grid->AddStretchSpacer();
+    const bool changed = matches != m_lastMatches;
+    m_lastMatches = matches;
+
+    m_root->Freeze();
+    m_grid->Clear(false);  // detach, don't delete
+    int shown = 0;
+    for (size_t i = 0; i < m_cards.size(); ++i) {
+        m_cards[i]->Show(matches[i]);
+        if (!matches[i]) continue;
+        m_grid->Add(m_cards[i], 1, wxEXPAND);
+        // Pictures fade in one after another, left to right, top to bottom.
+        if (changed) m_pictures[i]->PlayIntro(70 * shown);
+        ++shown;
+    }
+    // Fill out the first row so a single match keeps its normal width.
+    for (int filler = shown; filler < 4; ++filler) m_grid->AddStretchSpacer();
 
     m_empty->Show(shown == 0);
     if (shown == 0)
-        m_empty->SetLabel(m_favoritesOnly && query.IsEmpty() ? wxString(wxT("還沒有收藏的商品：點商品卡右上角的愛心加入收藏"))
+        m_empty->SetLabel(m_favoritesOnly && query.IsEmpty() ? wxString(wxT("還沒有收藏的商品：點商品卡右下角的愛心加入收藏"))
                                                               : wxString(wxT("找不到符合的商品，換個關鍵字試試")));
     wxString label = wxString::Format(wxT("%zu 類商品・%zu 款配色・可客製姓名與背號"),
                                       Catalog::Products().size(), Catalog::Colorways().size());
@@ -152,6 +179,8 @@ void LauncherFrame::ApplyFilter() {
         label = wxString::Format(wxT("%s%d 項商品"), m_category.IsEmpty() ? wxString() : m_category + wxT("・"), shown);
     m_count->SetLabel(label);
     m_root->Layout();
+    m_scroll->FitInside();
+    if (changed) m_scroll->Scroll(0, 0);
     m_root->Thaw();
 }
 
@@ -164,7 +193,10 @@ wxWindow* LauncherFrame::MakeProductCard(wxWindow* parent, int productIndex) {
 
     // The picture takes the spare height, so the grid fills a maximised or
     // full-screen window instead of leaving an empty band.
-    auto* picture = Theme::ImagePanel::ForAsset(card, wxT("category_") + product.id + wxT(".png"), wxSize(210, 150));
+    auto* picture = new Theme::ImagePanel(card, wxSize(210, 150), [&product](const wxSize& px) {
+        return Showcase::Tile(product, px, Theme::kCard);
+    });
+    m_pictures.push_back(picture);
     auto* heart = new Widgets::HeartToggle(card, Favorites::Get().Has(productIndex), 30);
     heart->SetToolTip(wxT("加入收藏"));
     heart->OnToggled([this, productIndex](bool) {
@@ -204,9 +236,20 @@ wxWindow* LauncherFrame::MakeProductCard(wxWindow* parent, int productIndex) {
 }
 
 void LauncherFrame::OpenProduct(int productIndex) {
-    if (m_opening) return;  // ignore double clicks while the page fades in
-    m_opening = true;
-    Theme::ShowLike(new ProductFrame(this, productIndex), this, [this] { Hide(); });
+    // Ignore a second click while the first page is still fading in. A time
+    // window rather than an on/off flag can never get stuck, even if the fade
+    // is cut short.
+    const wxLongLong now = wxGetLocalTimeMillis();
+    if (now - m_lastOpenMs < 600) return;
+    m_lastOpenMs = now;
+
+    auto* page = new ProductFrame(this, productIndex);
+    wxWeakRef<ProductFrame> alive(page);
+    Theme::ShowLike(page, this, [this, alive] {
+        // If the page was closed while it was still fading in, stay visible:
+        // hiding now would leave no window on screen with the app still running.
+        if (alive && alive->IsShown()) Hide();
+    });
 }
 
 void LauncherFrame::RefreshCartButton() {

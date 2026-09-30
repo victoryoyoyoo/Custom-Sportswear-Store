@@ -2,21 +2,24 @@
 
     python tools/gen_assets.py            # writes into ../assets
     python tools/gen_assets.py out_dir    # or somewhere else
+    python tools/gen_assets.py out_dir tee hoodie   # just some products
 
 Everything is vector-style drawing with Pillow: the store's own colourways and
-basketball mark, no photos, no third-party logos. Shapes are drawn at 3x and
-scaled down for smooth edges.
+basketball mark, no photos, no third-party logos. Shapes are drawn at 4x and
+scaled down for smooth edges; product art is saved at 2x its design size as a
+transparent cut-out, because the app lights it, shadows it and turns it round
+itself. The balls and the cap have no artwork here: the app draws them in 3D.
 """
 import math
 import os
 import random
 import sys
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "assets")
-FONTS = "C:/Windows/Fonts/" if os.name == "nt" else "/mnt/c/Windows/Fonts/"
-SS = 3
+SS = 4         # drawing is done at SS x the design size, then scaled down
+ART_SCALE = 2  # product art is saved at this multiple of its design size, so it stays sharp full screen
 
 NAVY = (14, 23, 42)
 ORANGE = (242, 106, 33)
@@ -39,10 +42,6 @@ COLORWAYS = [
 
 
 # ============================================================== helpers
-def font(name, size):
-    return ImageFont.truetype(FONTS + name, size)
-
-
 def rgb(h):
     h = h.lstrip("#")
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
@@ -121,11 +120,6 @@ class Canvas:
             d.ellipse(self.B((x0 + dx, y0 + dy, x1 + dx, y1 + dy)), fill=(0, 0, 0, alpha))
         self.img.alpha_composite(lay.filter(ImageFilter.GaussianBlur(blur * SS)))
 
-    def floor_shadow(self, box, alpha=80, blur=16):
-        lay = self.layer()
-        ImageDraw.Draw(lay).ellipse(self.B(box), fill=(0, 0, 0, alpha))
-        self.img.alpha_composite(lay.filter(ImageFilter.GaussianBlur(blur * SS)))
-
     def light(self, mask, box, alpha=34, blur=40, colour=(255, 255, 255)):
         """Soft highlight (or shadow, with a dark colour) clipped to mask."""
         lay = self.layer()
@@ -178,7 +172,7 @@ class Canvas:
         self.img.alpha_composite(img, (int(xy[0] * SS), int(xy[1] * SS)))
 
     def done(self):
-        return self.img.resize((self.w, self.h), Image.LANCZOS)
+        return self.img.resize((self.w * ART_SCALE, self.h * ART_SCALE), Image.LANCZOS)
 
 
 def emblem(fabric, trim, size):
@@ -223,7 +217,6 @@ def jersey(fabric, trim, front=False):
     hem = bez((452, 560), (260, 586), (68, 560))
     body = path((150, 30), neck, (370, 30), arm_r, (452, 560), hem, (72, 205), arm_l)
 
-    c.shadow(body, dx=10, dy=14)
     c.poly(body, p)
     m = c.mask(body)
     c.mesh(m, p)
@@ -257,7 +250,6 @@ def shorts(fabric, trim):
     body = path((130, 110), (470, 110), bez((470, 110), (492, 300), (512, 480)), (512, 480),
                 bez((512, 480), (410, 506), (318, 490)), (318, 490), (300, 322), (282, 490),
                 bez((282, 490), (190, 506), (88, 480)), bez((88, 480), (108, 300), (130, 110)))
-    c.shadow(body, dx=10, dy=14)
     c.poly(body, p)
     m = c.mask(body)
     c.mesh(m, p)
@@ -294,7 +286,6 @@ def cap(fabric, trim):
     """Six-panel baseball cap, three-quarter side view, bill to the right (520 x 420)."""
     c = Canvas(520, 420)
     p, s = rgb(fabric), rgb(trim)
-    c.floor_shadow((50, 295, 500, 355))
     crown = path(bez((40, 266), (20, 58), (215, 50)), bez((215, 50), (385, 58), (392, 252)),
                  bez((392, 252), (215, 292), (40, 266)))
     c.poly(crown, p)
@@ -331,7 +322,6 @@ def sneaker(fabric, trim):
     c = Canvas(640, 480)
     p, s = rgb(fabric), rgb(trim)
     white, sole_dark = (246, 246, 244), (52, 52, 58)
-    c.floor_shadow((60, 390, 610, 450), alpha=85)
     upper = path((96, 120), bez((96, 120), (150, 96), (206, 118)), bez((206, 118), (240, 170), (300, 176)),
                  bez((300, 176), (360, 200), (430, 262)), bez((430, 262), (560, 300), (586, 352)),
                  (590, 382), (80, 382), bez((80, 382), (70, 250), (96, 120)))
@@ -378,52 +368,10 @@ def sneaker(fabric, trim):
     return c.done()
 
 
-def basketball(fabric, trim):
-    """Two-tone basketball (560 x 560)."""
-    c = Canvas(560, 560)
-    p, s = rgb(fabric), rgb(trim)
-    cx, cy, r = 280, 262, 210
-    box = (cx - r, cy - r, cx + r, cy + r)
-    c.floor_shadow((110, 470, 450, 520), alpha=90, blur=14)
-    c.ellipse(box, p)
-    m = c.mask(ellipse=box)
-    # the two side panels (between the rim and the curved channels) in the trim colour
-    sides = Image.new("L", c.img.size, 0)
-    ImageDraw.Draw(sides).ellipse(c.B((cx - r * 1.95, cy - r * 1.3, cx - r * 0.62, cy + r * 1.3)), fill=255)
-    ImageDraw.Draw(sides).ellipse(c.B((cx + r * 0.62, cy - r * 1.3, cx + r * 1.95, cy + r * 1.3)), fill=255)
-    c.composite_clipped(Image.new("RGBA", c.img.size, s + (255,)), ImageChops.multiply(m, sides))
-    # pebble texture
-    rnd = random.Random(7)
-    peb = c.layer()
-    d = ImageDraw.Draw(peb)
-    for _ in range(5200):
-        a, rr = rnd.random() * math.tau, r * math.sqrt(rnd.random())
-        x, y = (cx + rr * math.cos(a)) * SS, (cy + rr * math.sin(a)) * SS
-        d.ellipse((x - 2.2, y - 2.2, x + 2.2, y + 2.2), fill=(0, 0, 0, 30))
-    c.composite_clipped(peb, m)
-    # channels
-    ch = (26, 24, 28, 255)
-    grooves = c.layer()
-    d = ImageDraw.Draw(grooves)
-    w = 7 * SS
-    d.line(c.P([(cx, cy - r), (cx, cy + r)]), fill=ch, width=w)
-    d.line(c.P([(cx - r, cy), (cx + r, cy)]), fill=ch, width=w)
-    d.ellipse(c.B((cx - r * 1.95, cy - r * 1.3, cx - r * 0.62, cy + r * 1.3)), outline=ch, width=w)
-    d.ellipse(c.B((cx + r * 0.62, cy - r * 1.3, cx + r * 1.95, cy + r * 1.3)), outline=ch, width=w)
-    c.composite_clipped(grooves, m)
-    # sphere shading
-    c.light(m, (cx - r * 0.9, cy - r * 0.95, cx + r * 0.1, cy - r * 0.05), alpha=70, blur=36)
-    c.light(m, (cx - r * 0.2, cy - r * 0.1, cx + r * 1.4, cy + r * 1.4), alpha=90, blur=50, colour=(0, 0, 0))
-    c.ellipse(box, outline=shade(p, 0.5), width=2)
-    c.paste(emblem(p, s, 54 * SS), (cx + 70, cy - 150))
-    return c.done()
-
-
 def socks(fabric, trim):
     """Pair of crew socks, side view (560 x 560)."""
     c = Canvas(560, 560)
     p, s = rgb(fabric), rgb(trim)
-    c.floor_shadow((90, 470, 520, 520), alpha=70)
 
     def one_sock(ox, oy, tone):
         body = path((ox + 70, oy + 40), (ox + 190, oy + 40), (ox + 190, oy + 300),
@@ -454,46 +402,14 @@ def socks(fabric, trim):
     return c.done()
 
 
-def wristband(fabric, trim):
-    """Terry wristband, slightly from above (520 x 440)."""
-    c = Canvas(520, 440)
-    p, s = rgb(fabric), rgb(trim)
-    c.floor_shadow((80, 280, 440, 330), alpha=70)
-    x0, x1, top, bottom, ry = 90, 430, 140, 250, 50
-    body = path(bez((x0, top), (260, top + ry * 1.9), (x1, top)), (x1, bottom),
-                bez((x1, bottom), (260, bottom + ry * 1.9), (x0, bottom)))
-    c.poly(body, p)
-    m = c.mask(body)
-    # terry texture: dense short loops
-    rnd = random.Random(3)
-    lay = c.layer()
-    d = ImageDraw.Draw(lay)
-    for _ in range(9000):
-        x, y = rnd.uniform(x0, x1) * SS, rnd.uniform(top, bottom + ry * 2) * SS
-        d.line([(x, y), (x + 1.5 * SS, y + 3 * SS)], fill=(0, 0, 0, 22), width=SS)
-    c.composite_clipped(lay, m)
-    for y in (top + 18, bottom - 30):
-        c.poly(path(bez((x0, y), (260, y + ry * 1.9), (x1, y)), (x1, y + 12),
-                    bez((x1, y + 12), (260, y + 12 + ry * 1.9), (x0, y + 12))), s)
-    # opening at the top
-    c.ellipse((x0, top - ry, x1, top + ry), shade(p, 0.85))
-    c.ellipse((x0 + 26, top - ry + 12, x1 - 26, top + ry - 12), shade(p, 0.5))
-    c.light(m, (60, 80, 240, 400), alpha=36, blur=30)
-    c.light(m, (300, 60, 520, 440), alpha=40, blur=34, colour=(0, 0, 0))
-    c.paste(emblem(p, s, 50 * SS), (235, 196))
-    return c.done()
-
-
 def backpack(fabric, trim):
     """Backpack, front view (520 x 600)."""
     c = Canvas(520, 600)
     p, s = rgb(fabric), rgb(trim)
-    c.floor_shadow((110, 540, 410, 585))
     # top handle
     c.line(bez((220, 90), (260, 40), (300, 90)), shade(p, 0.6), 12)
     body = path(bez((140, 150), (140, 70), (260, 70)), bez((260, 70), (380, 70), (380, 150)),
                 (388, 530), bez((388, 530), (260, 552), (132, 530)))
-    c.shadow(body, dx=8, dy=12)
     c.poly(body, p)
     m = c.mask(body)
     c.mesh(m, p, step=5, alpha=12)
@@ -520,129 +436,284 @@ def backpack(fabric, trim):
     return c.done()
 
 
+def tee(fabric, trim, front=True):
+    """Short-sleeve training tee (520 x 600): front with a crew neck, or the back."""
+    c = Canvas(520, 600)
+    p, s = rgb(fabric), rgb(trim)
+    dip = 96 if front else 62
+    neck = bez((196, 44), (260, dip), (324, 44))
+    body = path((196, 44), neck, (324, 44), bez((324, 44), (372, 52), (408, 70)),
+                (486, 186), (420, 226), (410, 206), bez((410, 206), (402, 400), (420, 572)),
+                bez((420, 572), (260, 588), (100, 572)), bez((100, 572), (118, 400), (110, 206)),
+                (100, 226), (34, 186), (112, 70), bez((112, 70), (148, 52), (196, 44)))
+    c.poly(body, p)
+    m = c.mask(body)
+    # cotton jersey knit: very fine horizontal courses instead of the mesh
+    lay = c.layer()
+    d = ImageDraw.Draw(lay)
+    dark = shade(p, 0.6) if luminance(p) > 60 else shade(p, 1.4)
+    for y in range(40, 590, 3):
+        d.line([(0, y * SS), (c.w * SS, y * SS)], fill=dark + (10,), width=1)
+    c.composite_clipped(lay, m)
+    # sleeve cuffs in the trim colour
+    c.line([(40, 180), (104, 218)], s, 12)
+    c.line([(480, 180), (416, 218)], s, 12)
+    # rib collar
+    c.line(neck, s, 16)
+    c.line(bez((200, 52), (260, dip + 8), (320, 52)), shade(s, 0.8) if luminance(s) > 70 else shade(s, 1.4), 2)
+    thread = shade(p, 1.45) if luminance(p) < 90 else shade(p, 0.6)
+    c.stitch(bez((104, 560), (260, 576), (416, 560)), thread)
+    c.stitch([(114, 212), (110, 70)], shade(p, 0.85), dash=4, gap=3, width=1)
+    c.stitch([(406, 212), (410, 70)], shade(p, 0.85), dash=4, gap=3, width=1)
+    # soft drape and light from the upper left
+    c.line(bez((160, 300), (176, 430), (150, 560)), shade(p, 0.92), 8)
+    c.line(bez((372, 330), (360, 450), (380, 560)), shade(p, 0.93), 6)
+    c.light(m, (130, 60, 330, 620), alpha=30, blur=45)
+    c.light(m, (60, 400, 480, 720), alpha=36, blur=50, colour=(0, 0, 0))
+    if front:
+        c.paste(emblem(p, s, 30 * SS), (380, 510))
+    else:
+        c.paste(emblem(p, s, 26 * SS), (247, 66))
+    return c.done()
+
+
+def hoodie(fabric, trim, front=True):
+    """Pullover hoodie (560 x 640): front with pocket and drawcords, or the back with the hood."""
+    c = Canvas(560, 640)
+    p, s = rgb(fabric), rgb(trim)
+    rib = shade(p, 0.82)
+    body = path((196, 70), bez((196, 70), (280, 92), (364, 70)), bez((364, 70), (430, 80), (462, 120)),
+                bez((462, 120), (520, 300), (528, 540)), (478, 548), bez((478, 548), (462, 380), (446, 250)),
+                (440, 560), (120, 560), (114, 250), bez((114, 250), (98, 380), (82, 548)), (32, 540),
+                bez((32, 540), (40, 300), (98, 120)), bez((98, 120), (130, 80), (196, 70)))
+    c.poly(body, p)
+    m = c.mask(body)
+    # brushed fleece: soft speckle
+    rnd = random.Random(11)
+    lay = c.layer()
+    d = ImageDraw.Draw(lay)
+    dark = shade(p, 0.55) if luminance(p) > 60 else shade(p, 1.35)
+    for _ in range(16000):
+        x, y = rnd.uniform(30, 530) * SS, rnd.uniform(60, 600) * SS
+        d.point((x, y), fill=dark + (40,))
+    c.composite_clipped(lay, m)
+    # ribbed cuffs and waistband
+    for box in ([(32, 540), (82, 548), (82, 590), (30, 584)], [(478, 548), (528, 540), (530, 584), (478, 590)],
+                [(120, 556), (440, 556), (440, 600), (120, 600)]):
+        c.poly(box, rib)
+    for x in range(124, 440, 7):
+        c.line([(x, 560), (x, 598)], shade(p, 0.72), 1.2)
+    # set-in sleeve seams
+    seam = shade(p, 0.78)
+    c.line(bez((150, 84), (118, 170), (114, 250)), seam, 3)
+    c.line(bez((410, 84), (442, 170), (446, 250)), seam, 3)
+    if front:
+        # hood opening lying around the neck, with the lining showing
+        hood = path(bez((180, 76), (190, 20), (280, 14)), bez((280, 14), (370, 20), (380, 76)),
+                    bez((380, 76), (330, 150), (280, 158)), bez((280, 158), (230, 150), (180, 76)))
+        c.poly(hood, shade(p, 0.9))
+        c.poly(path(bez((206, 70), (230, 40), (280, 38)), bez((280, 38), (330, 40), (354, 70)),
+                    bez((354, 70), (320, 128), (280, 132)), bez((280, 132), (240, 128), (206, 70))), shade(p, 0.5))
+        c.line(bez((180, 76), (230, 150), (280, 158)), s, 6)
+        c.line(bez((380, 76), (330, 150), (280, 158)), s, 6)
+        # drawcords with metal tips
+        for x0, x1 in ((252, 244), (308, 318)):
+            c.line(bez((x0, 140), (x0 - 4 + (x1 - x0), 210), (x1, 262)), s, 6)
+            c.poly([(x1 - 4, 260), (x1 + 4, 260), (x1 + 4, 282), (x1 - 4, 282)], (200, 200, 205))
+        # kangaroo pocket
+        pocket = path((170, 380), (390, 380), (430, 520), (130, 520))
+        c.shadow(pocket, dx=0, dy=3, blur=4, alpha=40)
+        c.poly(pocket, shade(p, 0.96))
+        thread = shade(p, 1.45) if luminance(p) < 90 else shade(p, 0.62)
+        c.stitch([(172, 388), (136, 514)], thread)
+        c.stitch([(388, 388), (424, 514)], thread)
+        c.stitch([(176, 386), (384, 386)], thread)
+        c.paste(emblem(p, s, 30 * SS), (382, 470))
+    else:
+        # the hood lies flat down the back
+        hood = path(bez((170, 72), (160, 250), (280, 300)), bez((280, 300), (400, 250), (390, 72)),
+                    bez((390, 72), (280, 96), (170, 72)))
+        c.shadow(hood, dx=0, dy=6, blur=8, alpha=50)
+        c.poly(hood, shade(p, 0.95))
+        c.line(bez((280, 92), (284, 200), (280, 300)), seam, 3)
+        c.line(bez((170, 72), (280, 96), (390, 72)), s, 6)
+        c.paste(emblem(p, s, 24 * SS), (268, 104))
+    c.light(m, (100, 60, 330, 620), alpha=30, blur=50)
+    c.light(m, (240, 360, 600, 720), alpha=38, blur=55, colour=(0, 0, 0))
+    return c.done()
+
+
+def towel(fabric, trim):
+    """Sports towel hanging from its loop (480 x 640)."""
+    c = Canvas(480, 640)
+    p, s = rgb(fabric), rgb(trim)
+    c.line(bez((222, 70), (240, 20), (258, 70)), shade(p, 0.6), 8)
+    body = path(bez((96, 90), (96, 70), (116, 70)), (364, 70), bez((364, 70), (384, 70), (384, 90)),
+                bez((384, 90), (392, 330), (378, 590)), bez((378, 590), (318, 606), (240, 596)),
+                bez((240, 596), (162, 606), (102, 590)), bez((102, 590), (88, 330), (96, 90)))
+    c.poly(body, p)
+    m = c.mask(body)
+    # terry loops
+    rnd = random.Random(5)
+    lay = c.layer()
+    d = ImageDraw.Draw(lay)
+    for _ in range(14000):
+        x, y = rnd.uniform(90, 390) * SS, rnd.uniform(66, 606) * SS
+        d.line([(x, y), (x + 1.2 * SS, y + 2.6 * SS)], fill=(0, 0, 0, 20), width=SS)
+    c.composite_clipped(lay, m)
+    # woven dobby border near the bottom, in the trim colour (text goes here)
+    band = path((96, 470), bez((96, 470), (240, 478), (386, 470)), (386, 538),
+                bez((386, 538), (240, 546), (94, 538)))
+    c.poly(band, s)
+    edge = shade(s, 0.75) if luminance(s) > 70 else shade(s, 1.5)
+    c.line(bez((96, 478), (240, 486), (386, 478)), edge, 2)
+    c.line(bez((96, 530), (240, 538), (386, 530)), edge, 2)
+    # hemmed sides and a gentle fold
+    c.line(bez((100, 92), (92, 330), (104, 588)), shade(p, 0.8), 4)
+    c.line(bez((380, 92), (388, 330), (376, 588)), shade(p, 0.8), 4)
+    c.line(bez((96, 76), (240, 72), (384, 76)), shade(p, 0.8), 6)
+    c.line(bez((250, 120), (236, 300), (258, 460)), shade(p, 0.92), 10)
+    c.light(m, (80, 40, 300, 500), alpha=34, blur=45)
+    c.light(m, (200, 300, 480, 700), alpha=34, blur=50, colour=(0, 0, 0))
+    c.paste(emblem(p, s, 40 * SS), (322, 104))
+    return c.done()
+
+
+def backpack_back(fabric, trim):
+    """The same backpack from behind: padded back panel and shoulder straps (520 x 600)."""
+    c = Canvas(520, 600)
+    p, s = rgb(fabric), rgb(trim)
+    c.line(bez((220, 90), (260, 40), (300, 90)), shade(p, 0.6), 12)
+    body = path(bez((140, 150), (140, 70), (260, 70)), bez((260, 70), (380, 70), (380, 150)),
+                (388, 530), bez((388, 530), (260, 552), (132, 530)))
+    c.poly(body, p)
+    m = c.mask(body)
+    # quilted air-mesh back panel
+    panel = path(bez((166, 140), (166, 112), (194, 112)), (326, 112), bez((326, 112), (354, 112), (354, 140)),
+                 (358, 470), bez((358, 470), (260, 486), (162, 470)))
+    c.poly(panel, shade(p, 0.84))
+    pm = c.mask(panel)
+    c.mesh(pm, shade(p, 0.84), step=5, alpha=30)
+    for y in (200, 290, 380):
+        c.line([(168, y), (356, y + 2)], shade(p, 0.66), 3)
+    c.line([(260, 116), (260, 480)], shade(p, 0.66), 3)
+    # shoulder straps with trim-coloured adjusters and webbing
+    strap = shade(p, 0.55)
+    for side in (-1, 1):
+        x = 260 + side * 62
+        pts = bez((x, 96), (x + side * 40, 280), (x + side * 26, 470))
+        c.line(pts, strap, 44)
+        c.line(bez((x + side * 22, 470), (x + side * 40, 506), (x + side * 70, 520)), shade(p, 0.4), 10)
+        c.poly([(x + side * 16 - 16, 420), (x + side * 16 + 16, 420), (x + side * 16 + 16, 440), (x + side * 16 - 16, 440)], s)
+        thread = shade(strap, 1.8) if luminance(strap) < 90 else shade(strap, 0.6)
+        c.stitch(bez((x - 14, 110), (x + side * 40 - 14, 280), (x + side * 26 - 14, 456)), thread, dash=5, gap=4, width=1)
+        c.stitch(bez((x + 14, 110), (x + side * 40 + 14, 280), (x + side * 26 + 14, 456)), thread, dash=5, gap=4, width=1)
+    # sternum strap
+    c.line([(214, 250), (306, 250)], shade(p, 0.4), 8)
+    c.poly([(248, 242), (272, 242), (272, 258), (248, 258)], s)
+    c.light(m, (130, 60, 320, 380), alpha=26, blur=40)
+    c.light(m, (240, 300, 480, 640), alpha=36, blur=45, colour=(0, 0, 0))
+    return c.done()
+
+
+def band_base(fabric, trim, x0, x1, top, bottom, ry, stripes, loops=9000, seed=3):
+    """Round terry band seen a little from above. No logo: the app prints it
+    and turns it round the band."""
+    c = Canvas(x1 + x0, bottom + int(ry * 2.2) + 30)
+    p, s = rgb(fabric), rgb(trim)
+    cx = (x0 + x1) / 2
+    body = path(bez((x0, top), (cx, top + ry * 1.9), (x1, top)), (x1, bottom),
+                bez((x1, bottom), (cx, bottom + ry * 1.9), (x0, bottom)))
+    c.poly(body, p)
+    m = c.mask(body)
+    rnd = random.Random(seed)
+    lay = c.layer()
+    d = ImageDraw.Draw(lay)
+    for _ in range(loops):
+        x, y = rnd.uniform(x0, x1) * SS, rnd.uniform(top, bottom + ry * 2) * SS
+        d.line([(x, y), (x + 1.5 * SS, y + 3 * SS)], fill=(0, 0, 0, 22), width=SS)
+    c.composite_clipped(lay, m)
+    for y in stripes:
+        c.poly(path(bez((x0, y), (cx, y + ry * 1.9), (x1, y)), (x1, y + 12),
+                    bez((x1, y + 12), (cx, y + 12 + ry * 1.9), (x0, y + 12))), s)
+    c.ellipse((x0, top - ry, x1, top + ry), shade(p, 0.85))
+    c.ellipse((x0 + 26, top - ry + 12, x1 - 26, top + ry - 12), shade(p, 0.5))
+    # cylinder shading: lit from the left, turning away on the right
+    c.light(m, (x0 - 40, top - 60, x0 + (x1 - x0) * 0.5, bottom + ry * 3), alpha=40, blur=30)
+    c.light(m, (x0 + (x1 - x0) * 0.62, top - 80, x1 + 90, bottom + ry * 3), alpha=46, blur=34, colour=(0, 0, 0))
+    return c.done()
+
+
+def wristband(fabric, trim):
+    """Terry wristband, slightly from above (520 x 440 canvas)."""
+    return band_base(fabric, trim, 90, 430, 140, 250, 50, (158, 220))
+
+
+def headband(fabric, trim):
+    """Wide terry headband (520 x 360 canvas)."""
+    return band_base(fabric, trim, 40, 480, 120, 190, 64, (124, 174), loops=12000, seed=9)
+
+
+def bottle(fabric, trim):
+    """Squeeze sports bottle, 750 ml (360 x 640). The print is added by the app."""
+    c = Canvas(360, 640)
+    p, s = rgb(fabric), rgb(trim)
+    cx, r, top, bottom, ry = 180, 104, 190, 590, 16
+    body = path((cx - r, top), bez((cx - r, top), (cx, top - 2 * ry), (cx + r, top)),
+                (cx + r, 250), bez((cx + r, 250), (cx + r - 12, 300), (cx + r, 350)), (cx + r, bottom),
+                bez((cx + r, bottom), (cx, bottom + 2 * ry), (cx - r, bottom)), (cx - r, 350),
+                bez((cx - r, 350), (cx - r + 12, 300), (cx - r, 250)))
+    c.poly(body, p)
+    m = c.mask(body)
+    # grip rings at the waist
+    for y in (272, 300, 328):
+        c.line(bez((cx - r + 8, y), (cx, y + 2 * ry), (cx + r - 8, y)), shade(p, 0.8), 3)
+    # base cup
+    c.poly(path((cx - r, 548), bez((cx - r, 548), (cx, 548 + 2 * ry), (cx + r, 548)), (cx + r, bottom),
+                bez((cx + r, bottom), (cx, bottom + 2 * ry), (cx - r, bottom))), shade(p, 0.75))
+    # cylinder shading: highlight strip on the left, falling off to the right
+    c.light(m, (cx - r * 0.95, top - 40, cx - r * 0.35, bottom + 40), alpha=70, blur=14)
+    c.light(m, (cx + r * 0.35, top - 60, cx + r * 1.6, bottom + 60), alpha=60, blur=22, colour=(0, 0, 0))
+    # lid, spout and flip cap in the trim colour
+    lid = s
+    lid_dark = shade(s, 0.7) if luminance(s) > 60 else shade(s, 1.6)
+    c.poly(path((cx - r + 6, top - 8), bez((cx - r + 6, top - 8), (cx, top - 8 + 2 * ry), (cx + r - 6, top - 8)),
+                (cx + r - 6, top - 64), (cx - r + 6, top - 64)), lid)
+    for x in range(int(cx - r + 14), int(cx + r - 6), 10):
+        c.line([(x, top - 60), (x, top - 14)], lid_dark, 2)
+    c.ellipse((cx - r + 6, top - 64 - ry, cx + r - 6, top - 64 + ry), shade(lid, 0.9) if luminance(lid) > 60 else shade(lid, 1.3))
+    c.poly([(cx - 26, top - 70), (cx + 26, top - 70), (cx + 16, top - 118), (cx - 16, top - 118)], lid_dark)
+    c.ellipse((cx - 16, top - 124, cx + 16, top - 112), lid_dark)
+    c.line(bez((cx + 30, top - 72), (cx + 66, top - 140), (cx + 20, top - 150)), lid, 10)
+    lm = c.mask(path((cx - r + 6, top - 64), (cx + r - 6, top - 64), (cx + r - 6, top), (cx - r + 6, top)))
+    c.light(lm, (cx - r, top - 90, cx - 20, top + 10), alpha=50, blur=12)
+    c.light(lm, (cx + 30, top - 90, cx + r + 40, top + 10), alpha=40, blur=14, colour=(0, 0, 0))
+    return c.done()
+
+
+# Artwork the app turns round in its 360° view, saved as transparent cut-outs
+# (the app adds the backdrop, shadow and lighting). Basketball, football and
+# cap are not here: the app draws those in 3D and only needs the emblem.
 PRODUCTS = {
     "jersey": jersey,
     "jersey_front": lambda fabric, trim: jersey(fabric, trim, front=True),
+    "tee": tee,
+    "tee_back": lambda fabric, trim: tee(fabric, trim, front=False),
+    "hoodie": hoodie,
+    "hoodie_back": lambda fabric, trim: hoodie(fabric, trim, front=False),
     "shorts": shorts,
-    "sneaker": sneaker,
-    "cap": cap,
-    "basketball": basketball,
     "socks": socks,
+    "sneaker": sneaker,
+    "headband": headband,
     "wristband": wristband,
     "backpack": backpack,
+    "backpack_back": backpack_back,
+    "bottle": bottle,
+    "towel": towel,
 }
 
 
 # ============================================================== brand art
-def vertical_gradient(w, h, top, bottom):
-    g = Image.new("RGB", (w, h))
-    d = ImageDraw.Draw(g)
-    for y in range(h):
-        t = y / max(1, h - 1)
-        d.line([(0, y), (w, y)], fill=tuple(int(top[i] + (bottom[i] - top[i]) * t) for i in range(3)))
-    return g
-
-
-def edge_fade(layer, margin):
-    """Fade a layer's alpha to zero near the image border."""
-    w, h = layer.size
-    m = Image.new("L", (w, h), 0)
-    d = ImageDraw.Draw(m)
-    steps = 40
-    for i in range(steps):
-        inset = margin * i / steps
-        d.rectangle((inset, inset, w - inset, h - inset), fill=int(255 * (i + 1) / steps))
-    a = Image.composite(layer.getchannel("A"), Image.new("L", (w, h), 0), m.filter(ImageFilter.GaussianBlur(margin / 4)))
-    layer.putalpha(a)
-    return layer
-
-
-def fit(img, box_w, box_h):
-    r = min(box_w / img.width, box_h / img.height)
-    return img.resize((max(1, int(img.width * r)), max(1, int(img.height * r))), Image.LANCZOS)
-
-
-def banner(k=2):
-    """Welcome artwork on the window's navy, 900 x 400 layout units at k x.
-    Every decoration fades out before the border, so the app can place it on
-    a navy window of any size (windowed or full screen) without visible edges."""
-    W, H = 900 * k, 400 * k
-
-    def K(*v):
-        return tuple(int(x * k) for x in v)
-
-    img = Image.new("RGBA", (W, H), NAVY + (255,))
-    deco = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(glow).ellipse(K(500, 20, 900, 420), fill=ORANGE + (78,))
-    deco.alpha_composite(glow.filter(ImageFilter.GaussianBlur(70 * k)))
-    line = (255, 255, 255, 26)
-    d = ImageDraw.Draw(deco)
-    d.ellipse(K(560, 210, 960, 610), outline=line, width=3 * k)
-    d.arc(K(280, -260, 1240, 660), 90, 270, fill=line, width=3 * k)
-    d.rectangle(K(720, 110, 900, 290), outline=line, width=3 * k)
-    d.ellipse(K(640, 140, 760, 260), outline=line, width=3 * k)
-    img.alpha_composite(edge_fade(deco, 60 * k))
-
-    # a soft pool of light on the "floor" so dark soles and shadows read
-    floor = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(floor).ellipse(K(450, 330, 900, 430), fill=(120, 150, 210, 40))
-    img.alpha_composite(edge_fade(floor.filter(ImageFilter.GaussianBlur(30 * k)), 40 * k))
-
-    cw = {c[0]: c for c in COLORWAYS}
-    items = [
-        (jersey, "crimson", (462, 36, 190, 220)),
-        (jersey, "navy", (584, 16, 200, 236)),
-        (jersey, "jade", (704, 50, 180, 208)),
-        (sneaker, "royal", (478, 226, 212, 150)),
-        (basketball, "sunset", (712, 246, 122, 122)),
-    ]
-    for fn, cid, (x, y, bw, bh) in items:
-        art = fn(cw[cid][3], cw[cid][4])
-        art = fit(art, bw * k, bh * k)
-        img.alpha_composite(art, K(x + (bw - art.width / k) / 2, y + (bh - art.height / k) / 2))
-
-    d = ImageDraw.Draw(img)
-    d.rounded_rectangle(K(56, 86, 64, 150), 3 * k, fill=ORANGE)
-    d.text(K(80, 84), "運動用品客製購物系統", font=font("msjhbd.ttc", 37 * k), fill=(255, 255, 255))
-    d.text(K(82, 138), "CUSTOM  SPORTSWEAR  STORE", font=font("bahnschrift.ttf", 20 * k), fill=(170, 184, 208))
-    d.text(K(82, 198), "8 大類商品・12 款配色・客製姓名與背號", font=font("msjh.ttc", 19 * k), fill=(214, 222, 236))
-    d.text(K(82, 230), "Custom teamwear, previewed live.", font=font("segoeui.ttf", 17 * k), fill=(140, 154, 180))
-    x = 82
-    f = font("msjhbd.ttc", 14 * k)
-    for label in ("即時預覽", "客製背號", "滿額免運"):
-        w = d.textlength(label, font=f) / k + 24
-        d.rounded_rectangle(K(x, 288, x + w, 316), 14 * k, outline=(90, 108, 140), width=2 * k)
-        d.text(K(x + 12, 292), label, font=f, fill=(190, 202, 222))
-        x += w + 10
-    return img.convert("RGB")
-
-
-def category_tile(product, a, b, k=2):
-    """Category picture: two colourways on a soft backdrop, 300 x 240 at k x."""
-    W, H = 300 * k, 240 * k
-    img = vertical_gradient(W, H, (246, 247, 251), (228, 233, 242)).convert("RGBA")
-    cw = {c[0]: c for c in COLORWAYS}
-    fn = PRODUCTS[product]
-    back = fit(fn(cw[a][3], cw[a][4]), 170 * k, 170 * k)
-    front = fit(fn(cw[b][3], cw[b][4]), 200 * k, 200 * k)
-    img.alpha_composite(back, (int(22 * k), int((H - back.height) / 2 - 12 * k)))
-    img.alpha_composite(front, (int(W - front.width - 20 * k), int((H - front.height) / 2 + 10 * k)))
-    return img.convert("RGB")
-
-
-CATEGORY_PAIRS = {
-    "jersey": ("crimson", "navy"),
-    "shorts": ("jade", "onyx"),
-    "sneaker": ("sunset", "royal"),
-    "cap": ("jade", "royal"),
-    "basketball": ("navy", "sunset"),
-    "socks": ("teal", "crimson"),
-    "wristband": ("violet", "sunset"),
-    "backpack": ("steel", "navy"),
-}
-
-
 def app_logo():
     S = 256 * SS
     img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
@@ -660,18 +731,15 @@ def app_logo():
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    only = set(sys.argv[2:])  # optional: limit to some products (or "banner") while tweaking
+    only = set(sys.argv[2:])  # optional: limit to some products (or "emblem") while tweaking
     for name, fn in PRODUCTS.items():
         if only and name not in only:
             continue
         for cid, _, _, fabric, trim in COLORWAYS:
-            # Shown on white cards, so saved already blended onto white.
-            on_white(fn(fabric, trim)).save(f"{OUT}/{name}_{cid}.png")
-        if name in CATEGORY_PAIRS:
-            a, b = CATEGORY_PAIRS[name]
-            category_tile(name, a, b).save(f"{OUT}/category_{name}.png")
-    if not only or "banner" in only:
-        banner().save(f"{OUT}/banner.png")
+            fn(fabric, trim).save(f"{OUT}/{name}_{cid}.png", optimize=True)
+    if not only or "emblem" in only:
+        for cid, _, _, fabric, trim in COLORWAYS:
+            emblem(rgb(fabric), rgb(trim), 256).save(f"{OUT}/emblem_{cid}.png", optimize=True)
     if not only:
         logo = app_logo()
         logo.save(f"{OUT}/app_logo.png")

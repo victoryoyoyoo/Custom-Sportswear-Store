@@ -2,8 +2,10 @@
 #include "CartDialog.h"
 #include "ProductDialogs.h"
 #include "SwatchPicker.h"
+#include "Turntable.h"
 #include <wx/statline.h>
 #include <algorithm>
+#include <cmath>
 
 namespace {
     constexpr int kPad = 28;  // content inset inside the cards
@@ -66,15 +68,16 @@ void ProductFrame::BuildLayout() {
     Widgets::Card* previewCard = Theme::MakeCard(root);
     wxBoxSizer* previewSizer = new wxBoxSizer(wxVERTICAL);
 
-    // Top row: back/front switch (jersey only) on the left, favourite heart on the right.
+    // Top row: side switch (products with front and back artwork) on the left, favourite heart on the right.
     wxBoxSizer* previewTop = new wxBoxSizer(wxHORIZONTAL);
-    if (!product.frontArtId.IsEmpty()) {
-        auto* view = new Widgets::ChipPicker(previewCard, { wxT("背面"), wxT("正面") }, 0);
-        previewTop->Add(view, 0, wxALIGN_CENTER_VERTICAL);
-        view->OnSelectionChanged([this](int index) {
-            m_front = index == 1;
-            RefreshPreview(true);
+    if (product.shape == Shape::Flat && !product.reverseArtId.IsEmpty()) {
+        m_sideChips = new Widgets::ChipPicker(previewCard, { product.sideNames[0], product.sideNames[1] }, 0);
+        previewTop->Add(m_sideChips, 0, wxALIGN_CENTER_VERTICAL);
+        m_sideChips->OnSelectionChanged([this](int index) {
+            if (!m_syncingSide) m_preview->TurnTo(Showcase::PrintAngle(GetProduct(), index));
         });
+    } else {
+        previewTop->Add(Theme::MakeLabel(previewCard, wxT("360° 預覽"), 10, true, Theme::kMuted), 0, wxALIGN_CENTER_VERTICAL);
     }
     previewTop->AddStretchSpacer();
     m_heart = new Widgets::HeartToggle(previewCard, Favorites::Get().Has(m_productIndex));
@@ -83,8 +86,15 @@ void ProductFrame::BuildLayout() {
     previewTop->Add(m_heart, 0, wxALIGN_CENTER_VERTICAL);
     previewSizer->Add(previewTop, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(20));
 
-    m_preview = new Theme::ImagePanel(previewCard, wxSize(340, 320),
-                                      [this](const wxSize& px) { return RenderPreview(px); });
+    m_preview = new Turntable(previewCard, wxSize(340, 320), [this](const wxSize& px) {
+        return Showcase::Build(GetProduct(), CurrentColorway(), m_personalizer.get(), px);
+    });
+    m_preview->OnSideChanged([this](int side) {
+        if (!m_sideChips) return;
+        m_syncingSide = true;
+        m_sideChips->SetSelection(side);
+        m_syncingSide = false;
+    });
     previewSizer->Add(m_preview, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(12));
     m_previewTitle = Theme::MakeLabel(previewCard, wxEmptyString, 16, true);
     m_previewSubtitle = Theme::MakeLabel(previewCard, wxEmptyString, 10, false, Theme::kMuted);
@@ -133,7 +143,11 @@ void ProductFrame::BuildLayout() {
     if (product.personalization != Personalization::None) {
         AddSection(form, product.textLabel);
         wxBoxSizer* custom = new wxBoxSizer(wxVERTICAL);
-        m_personalizer->BuildControls(m_formCard, custom, [this] { RefreshPreview(); });
+        // Typing turns the product round to where the print goes.
+        m_personalizer->BuildControls(m_formCard, custom, [this](int side) {
+            RefreshPreview();
+            m_preview->TurnTo(Showcase::PrintAngle(GetProduct(), side));
+        });
         form->Add(custom, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(kPad));
     }
 
@@ -218,31 +232,7 @@ void ProductFrame::BuildLayout() {
     SetQuantity(1);
     RefreshPreview();
     RefreshCartButton();
-}
-
-wxBitmap ProductFrame::RenderPreview(const wxSize& pixels) const {
-    const Product& product = GetProduct();
-    const Colorway& colorway = CurrentColorway();
-    wxBitmap canvas(pixels.x, pixels.y, 24);
-    {
-        wxMemoryDC dc(canvas);
-        dc.SetBackground(wxBrush(Theme::kCard));
-        dc.Clear();
-        std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
-        const wxString artId = m_front ? product.frontArtId : product.id;
-        wxImage art(Theme::AssetPath(artId + wxT("_") + colorway.id + wxT(".png")), wxBITMAP_TYPE_PNG);
-        if (gc && art.IsOk()) {
-            const double fit = std::min((double)pixels.x / art.GetWidth(), (double)pixels.y / art.GetHeight());
-            const double w = art.GetWidth() * fit, h = art.GetHeight() * fit;
-            const wxRect2DDouble area((pixels.x - w) / 2, (pixels.y - h) / 2, w, h);
-            // Resampled by the graphics backend: wxImage::Scale leaves a
-            // contour line across the soft shadows. Overdraw 1px at the edges.
-            gc->SetInterpolationQuality(wxINTERPOLATION_BEST);
-            gc->DrawBitmap(wxBitmap(art), area.m_x - 1, area.m_y - 1, w + 2, h + 2);
-            m_personalizer->Draw(gc.get(), area, colorway, m_front);
-        }
-    }
-    return canvas;
+    m_preview->Spin(450);  // one slow turn as the page opens, to show it can be turned
 }
 
 wxString ProductFrame::DescribeSpec() const {
@@ -259,7 +249,12 @@ void ProductFrame::RefreshPreview(bool crossfade) {
     const Product& product = GetProduct();
     const Colorway& c = CurrentColorway();
     const int size = m_sizes ? m_sizes->GetSelection() : product.defaultSize;
-    m_preview->Rerender(crossfade);
+    // Size doesn't change the picture; colourway and print do.
+    const wxString look = c.id + wxT("|") + m_personalizer->Describe();
+    if (look != m_previewLook) {
+        m_previewLook = look;
+        m_preview->Rebuild(crossfade);
+    }
     m_previewTitle->SetLabel(product.name + wxT("・") + c.name);
     m_previewSubtitle->SetLabel(c.englishName + wxT("  ·  ") + DescribeSpec());
     m_colorValue->SetLabel(c.name + wxT("  ") + c.englishName);
@@ -278,8 +273,20 @@ void ProductFrame::SetQuantity(int quantity) {
 }
 
 void ProductFrame::RefreshTotals() {
-    m_subtotal->SetLabel(Theme::FormatPrice(GetProduct().price * m_quantity));
-    m_formCard->Layout();
+    // The subtotal rolls to the new amount instead of jumping.
+    const int target = GetProduct().price * m_quantity;
+    if (m_shownSubtotal < 0) {
+        m_shownSubtotal = target;
+        m_subtotal->SetLabel(Theme::FormatPrice(target));
+        m_formCard->Layout();
+        return;
+    }
+    const int from = m_shownSubtotal;
+    m_subtotalTween.Start(280, [this, from, target](double t) {
+        m_shownSubtotal = (int)std::lround(from + (target - from) * t);
+        m_subtotal->SetLabel(Theme::FormatPrice(m_shownSubtotal));
+        m_formCard->Layout();
+    });
 }
 
 void ProductFrame::RefreshCartButton() {

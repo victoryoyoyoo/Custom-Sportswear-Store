@@ -32,7 +32,14 @@ void Tween::Start(int durationMs, std::function<void(double)> onStep, std::funct
 
 void Tween::Notify() {
     const double t = std::min(1.0, (wxGetLocalTimeMillis() - m_startMs).ToDouble() / m_durationMs);
-    if (m_onStep) m_onStep(EaseOut(t));
+    if (m_onStep) {
+        // Call a copy: the step may start this tween again, which would
+        // replace m_onStep while it is still running.
+        const wxLongLong startedAt = m_startMs;
+        auto step = m_onStep;
+        step(EaseOut(t));
+        if (m_startMs != startedAt || !IsRunning()) return;  // restarted or stopped
+    }
     if (t >= 1.0) {
         Stop();
         if (m_onDone) {

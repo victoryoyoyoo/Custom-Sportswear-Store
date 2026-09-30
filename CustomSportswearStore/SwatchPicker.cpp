@@ -39,8 +39,13 @@ SwatchPicker::SwatchPicker(wxWindow* parent, int columns)
 
 void SwatchPicker::SetSelection(int index) {
     if (index < 0 || index >= (int)Catalog::Colorways().size() || index == m_selected) return;
+    m_previous = m_selected;
     m_selected = index;
-    Refresh();
+    // The orange ring grows out of the new dot while the old one fades away.
+    m_ringTween.Start(260, [this](double t) {
+        m_ring = t;
+        Refresh(false);
+    });
     if (m_onChange) m_onChange(m_selected);
 }
 
@@ -71,10 +76,18 @@ void SwatchPicker::OnPaint(wxPaintEvent&) {
         const double cx = cell.x + cell.width / 2.0;
         const double cy = cell.y + cell.height / 2.0;
 
-        if (i == m_selected || i == m_hovered) {
-            const double ring = dot + FromDIP(i == m_selected ? 10 : 8);
-            gc->SetBrush(*wxTRANSPARENT_BRUSH);
-            gc->SetPen(wxPen(i == m_selected ? Theme::kOrange : Theme::kBorder, FromDIP(i == m_selected ? 3 : 2)));
+        gc->SetBrush(*wxTRANSPARENT_BRUSH);
+        if (i == m_selected) {
+            const double ring = dot + FromDIP(10) * m_ring;
+            gc->SetPen(wxPen(Widgets::Mix(GetParent()->GetBackgroundColour(), Theme::kOrange, m_ring), FromDIP(3)));
+            gc->DrawEllipse(cx - ring / 2, cy - ring / 2, ring, ring);
+        } else if (i == m_previous && m_ring < 1.0) {
+            const double ring = dot + FromDIP(10);
+            gc->SetPen(wxPen(Widgets::Mix(Theme::kOrange, GetParent()->GetBackgroundColour(), m_ring), FromDIP(3)));
+            gc->DrawEllipse(cx - ring / 2, cy - ring / 2, ring, ring);
+        } else if (i == m_hovered) {
+            const double ring = dot + FromDIP(8);
+            gc->SetPen(wxPen(Theme::kBorder, FromDIP(2)));
             gc->DrawEllipse(cx - ring / 2, cy - ring / 2, ring, ring);
         }
         DrawDot(gc.get(), colorways[i], cx, cy, dot);

@@ -1,4 +1,5 @@
 #include "CartDialog.h"
+#include "Showcase.h"
 #include "Catalog.h"
 #include "Theme.h"
 #include <wx/datetime.h>
@@ -126,7 +127,7 @@ CartDialog::CartDialog(wxWindow* parent)
     m_list = new wxListView(m_itemsPanel, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(-1, 240)),
                             wxLC_REPORT | wxLC_SINGLE_SEL | wxBORDER_NONE);
     m_list->SetFont(Theme::Font(10));
-    m_list->InsertColumn(kColItem, wxT("商品"), wxLIST_FORMAT_LEFT, FromDIP(250));
+    m_list->InsertColumn(kColItem, wxT("商品"), wxLIST_FORMAT_LEFT, FromDIP(236));
     m_list->InsertColumn(kColSpec, wxT("規格"), wxLIST_FORMAT_LEFT, FromDIP(150));
     m_list->InsertColumn(kColUnit, wxT("單價"), wxLIST_FORMAT_RIGHT, FromDIP(86));
     m_list->InsertColumn(kColQty, wxT("數量"), wxLIST_FORMAT_CENTER, FromDIP(56));
@@ -215,7 +216,7 @@ CartDialog::CartDialog(wxWindow* parent)
     m_itemsPanel->Show(!ShoppingCart::Get().IsEmpty());
     m_emptyPanel->Show(ShoppingCart::Get().IsEmpty());
     const wxSize needed = root->ComputeFittingClientSize(this);
-    const wxSize preferred = FromDIP(wxSize(1060, 660));
+    const wxSize preferred = FromDIP(wxSize(1180, 660));
     SetMinClientSize(needed);
     SetClientSize(wxSize(std::max(needed.x, preferred.x), std::max(needed.y, preferred.y)));
     CentreOnParent();
@@ -267,11 +268,7 @@ void CartDialog::RefreshCart() {
         const int thumb = FromDIP(52);
         wxImageList* images = new wxImageList(thumb, thumb, false);
         for (const CartItem& item : items) {
-            wxImage art = Theme::LoadFittedPixels(item.GetProduct().id + wxT("_") + item.GetColorway().id + wxT(".png"),
-                                                  wxSize(thumb, thumb)).ConvertToImage();
-            // pad to a centred square so every row lines up
-            images->Add(wxBitmap(art.Size(wxSize(thumb, thumb),
-                                          wxPoint((thumb - art.GetWidth()) / 2, (thumb - art.GetHeight()) / 2), 255, 255, 255)));
+            images->Add(Showcase::Still(item.GetProduct(), item.GetColorway(), wxSize(thumb, thumb), *wxWHITE));
         }
         m_list->AssignImageList(images, wxIMAGE_LIST_SMALL);
         m_list->DeleteAllItems();
@@ -333,8 +330,8 @@ void CartDialog::OnRemove() {
     const long row = SelectedRow();
     if (row < 0) return;
     const CartItem& item = ShoppingCart::Get().Items()[row];
-    if (wxMessageBox(wxString::Format(wxT("要從購物車移除這項商品嗎？\n\n%s（%s）"), item.Title(), item.spec),
-                     wxT("移除商品"), wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION, this) != wxYES)
+    if (!Theme::Confirm(this, wxT("移除商品"),
+                        wxString::Format(wxT("要從購物車移除這項商品嗎？\n\n%s（%s）"), item.Title(), item.spec), wxT("移除")))
         return;
     ShoppingCart::Get().RemoveAt((size_t)row);
     RefreshCart();
@@ -342,7 +339,7 @@ void CartDialog::OnRemove() {
 }
 
 void CartDialog::OnClear() {
-    if (wxMessageBox(wxT("確定要清空購物車嗎？"), wxT("清空購物車"), wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION, this) != wxYES)
+    if (!Theme::Confirm(this, wxT("清空購物車"), wxT("確定要清空購物車嗎？"), wxT("清空")))
         return;
     ShoppingCart::Get().Clear();
     m_couponInput->Clear();
@@ -445,6 +442,9 @@ CheckoutDialog::CheckoutDialog(wxWindow* parent)
     grid->Add(Theme::MakeLabel(card, wxT("付款方式"), 11, false, Theme::kMuted), 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
     m_payment = new wxChoice(card, wxID_ANY);
     m_payment->SetFont(Theme::Font(11));
+    m_payment->Append(wxT("貨到付款"));
+    m_payment->Append(wxT("ATM 轉帳"));
+    m_payment->SetSelection(0);
     grid->Add(m_payment, 0, wxEXPAND | wxTOP | wxBOTTOM, FromDIP(6));
 
     wxBoxSizer* cardSizer = new wxBoxSizer(wxVERTICAL);
@@ -538,12 +538,6 @@ void CheckoutDialog::OnDeliveryChanged() {
     if (m_addressLabel) m_addressLabel->SetLabel(store ? wxT("取貨門市") : wxT("收件地址"));
     m_fields[3].input->SetHint(store ? wxT("超商與門市名稱，例如：台北車站門市") : wxT("縣市、區、路名與門牌號碼"));
 
-    // Paying on delivery is called 取貨付款 at a convenience store.
-    const int previous = m_payment->GetSelection();
-    m_payment->Clear();
-    m_payment->Append(store ? wxT("取貨付款") : wxT("貨到付款"));
-    m_payment->Append(wxT("ATM 轉帳"));
-    m_payment->SetSelection(previous == wxNOT_FOUND ? 0 : previous);
     if (m_fields[3].touched) ValidateField(m_fields[3]);
     Layout();
 }
@@ -662,9 +656,9 @@ void OrderCompleteDialog::SaveReceipt(wxWindow* receipt, const wxString& orderNu
                      wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
     if (ask.ShowModal() != wxID_OK) return;
     if (image.SaveFile(ask.GetPath(), wxBITMAP_TYPE_PNG))
-        wxMessageBox(wxT("已儲存：\n") + ask.GetPath(), wxT("儲存收據"), wxOK | wxICON_INFORMATION, this);
+        Theme::Inform(this, wxT("儲存收據"), wxT("已儲存：\n") + ask.GetPath());
     else
-        wxMessageBox(wxT("無法儲存到這個位置，請換一個資料夾。"), wxT("儲存收據"), wxOK | wxICON_WARNING, this);
+        Theme::Inform(this, wxT("儲存收據"), wxT("無法儲存到這個位置，請換一個資料夾。"), true);
 }
 
 // ===========================================================================
@@ -769,9 +763,13 @@ void OrdersDialog::ShowOrder(long index) {
         r->Add(Theme::MakeLabel(m_detail, right, bold ? 13 : 10, bold, colour), 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(12));
         s->Add(r, 0, wxEXPAND | wxBOTTOM, FromDIP(6));
     };
-    for (const CartItem& item : o.items)
-        row(wxString::Format(wxT("%s（%s）× %d"), item.Title(), item.spec, item.quantity), Theme::FormatPrice(item.Subtotal()),
+    // Two lines per item: title and price, then the spec in small grey text,
+    // so a long spec (name, number, team) never gets cut off.
+    for (const CartItem& item : o.items) {
+        row(wxString::Format(wxT("%s × %d"), item.Title(), item.quantity), Theme::FormatPrice(item.Subtotal()),
             Theme::kText, false, false);
+        s->Add(Theme::MakeLabel(m_detail, item.spec, 9, false, Theme::kMuted), 0, wxBOTTOM, FromDIP(8));
+    }
     if (o.discount > 0)
         row(wxT("優惠折扣（") + o.couponCode + wxT("）"), wxT("-") + Theme::FormatPrice(o.discount), Theme::kSuccess);
     row(wxT("運費"), o.shipping == 0 ? wxString(wxT("免運費")) : Theme::FormatPrice(o.shipping), Theme::kMuted);

@@ -64,10 +64,29 @@ namespace {
         return text;
     }
 
-    void BindChange(wxSpinCtrl* spin, const std::function<void()>& onChange) {
-        spin->Bind(wxEVT_SPINCTRL, [onChange](wxSpinEvent&) { onChange(); });
-        spin->Bind(wxEVT_TEXT, [onChange](wxCommandEvent&) { onChange(); });
+    void BindChange(wxSpinCtrl* spin, const std::function<void(int)>& onChange, int side) {
+        spin->Bind(wxEVT_SPINCTRL, [onChange, side](wxSpinEvent&) { onChange(side); });
+        spin->Bind(wxEVT_TEXT, [onChange, side](wxCommandEvent&) { onChange(side); });
     }
+
+    void BindChange(wxTextCtrl* text, const std::function<void(int)>& onChange, int side) {
+        text->Bind(wxEVT_TEXT, [onChange, side](wxCommandEvent&) { onChange(side); });
+    }
+}
+
+wxImage Personalizer::TextDecal(const wxString& text, const wxSize& pixels, const wxColour& fill, const wxColour& outline) {
+    wxImage image(pixels.x, pixels.y);
+    image.InitAlpha();
+    memset(image.GetAlpha(), 0, (size_t)pixels.x * pixels.y);
+    std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(image));
+    if (gc && !text.IsEmpty()) {
+        const double stroke = std::max(1.0, pixels.y * 0.05);
+        wxFont font = FitFont(gc.get(), text, NameFace(text), true, pixels.x - 4 * stroke, pixels.y - 2 * stroke);
+        const double top = (pixels.y - font.GetPixelSize().GetHeight()) / 2.0;
+        DrawOutlinedText(gc.get(), text, font, pixels.x / 2.0, top, fill, outline, stroke);
+    }
+    gc.reset();  // writes the drawing back into the image
+    return image;
 }
 
 std::unique_ptr<Personalizer> Personalizer::For(const Product& product) {
@@ -83,7 +102,7 @@ std::unique_ptr<Personalizer> Personalizer::For(const Product& product) {
 // ---------------------------------------------------------------------------
 // Name + number (jersey)
 // ---------------------------------------------------------------------------
-void NameAndNumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void()> onChange) {
+void NameAndNumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int)> onChange) {
     wxFlexGridSizer* grid = new wxFlexGridSizer(2, 2, parent->FromDIP(6), parent->FromDIP(16));
     grid->Add(Theme::MakeLabel(parent, wxT("背號（0–99）"), 10, false, Theme::kMuted));
     grid->Add(Theme::MakeLabel(parent, wxString::Format(wxT("印製姓名（選填，最多 %d 字）"), m_product.maxTextLength),
@@ -99,9 +118,10 @@ void NameAndNumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, 
     m_team = MakeText(parent, 14, wxT("例如：TIGERS"));
     sizer->Add(m_team, 0, wxEXPAND);
 
-    BindChange(m_number, onChange);
-    m_name->Bind(wxEVT_TEXT, [onChange](wxCommandEvent&) { onChange(); });
-    m_team->Bind(wxEVT_TEXT, [onChange](wxCommandEvent&) { onChange(); });
+    // Name and number go on the back (the side the page opens on), the team on the front.
+    BindChange(m_number, onChange, 0);
+    BindChange(m_name, onChange, 0);
+    BindChange(m_team, onChange, 1);
 }
 
 wxString NameAndNumberPersonalizer::Spec(int number, const wxString& name, const wxString& team) {
@@ -119,9 +139,9 @@ wxString NameAndNumberPersonalizer::Describe() const {
     return Spec(m_number->GetValue(), PrintedName(), TeamName());
 }
 
-void NameAndNumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c, bool front) const {
+void NameAndNumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c, int side) const {
     const double k = art.m_width / m_product.artWidth;
-    if (front) {
+    if (side == 1) {
         // Team name across the chest, a smaller number under it.
         const PrintArea& ta = m_product.teamArea;
         const PrintArea& fn = m_product.frontNumberArea;
@@ -157,18 +177,19 @@ void NameAndNumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble
 // ---------------------------------------------------------------------------
 // Number only (shorts)
 // ---------------------------------------------------------------------------
-void NumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void()> onChange) {
+void NumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int)> onChange) {
     sizer->Add(Theme::MakeLabel(parent, wxT("背號（0–99）"), 10, false, Theme::kMuted), 0, wxBOTTOM, parent->FromDIP(6));
     m_number = MakeNumberSpin(parent, 23);
     sizer->Add(m_number);
-    BindChange(m_number, onChange);
+    BindChange(m_number, onChange, m_product.printSide);
 }
 
 wxString NumberPersonalizer::Describe() const {
     return wxString::Format(wxT("#%d"), m_number->GetValue());
 }
 
-void NumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c, bool) const {
+void NumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c, int side) const {
+    if (side != m_product.printSide) return;
     const double k = art.m_width / m_product.artWidth;
     const PrintArea& a = m_product.numberArea;
     wxFont font(wxFontInfo(wxSize(0, (int)(a.height * k))).FaceName(wxT("Impact")));
@@ -177,15 +198,15 @@ void NumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, 
 }
 
 // ---------------------------------------------------------------------------
-// Short text (cap, ball, wristband, backpack)
+// Short text (tee, hoodie, backpack, towel; balls, cap, bands, bottle in 3D)
 // ---------------------------------------------------------------------------
-void TextPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void()> onChange) {
+void TextPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int)> onChange) {
     sizer->Add(Theme::MakeLabel(parent, wxString::Format(wxT("最多 %d 字，中英文皆可"), m_product.maxTextLength),
                                 10, false, Theme::kMuted),
                0, wxBOTTOM, parent->FromDIP(6));
     m_text = MakeText(parent, m_product.maxTextLength, wxT("例如：TEAM WANG"));
     sizer->Add(m_text, 0, wxEXPAND);
-    m_text->Bind(wxEVT_TEXT, [onChange](wxCommandEvent&) { onChange(); });
+    BindChange(m_text, onChange, m_product.printSide);
 }
 
 wxString TextPersonalizer::Text() const { return Cleaned(m_text, false); }
@@ -194,45 +215,17 @@ wxString TextPersonalizer::Describe() const {
     return Text().IsEmpty() ? wxString() : wxT("「") + Text() + wxT("」");
 }
 
-void TextPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c, bool) const {
+wxString TextPersonalizer::PrintText() const { return Text(); }
+
+void TextPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c, int side) const {
     const wxString text = Text();
-    if (text.IsEmpty()) return;
+    if (text.IsEmpty() || !m_product.textArea.IsSet() || side != m_product.printSide) return;
     const double k = art.m_width / m_product.artWidth;
-
-    if (m_product.textArea.IsSet()) {
-        const PrintArea& a = m_product.textArea;
-        wxFont font = FitFont(gc, text, NameFace(text), true, a.maxWidth * k, a.height * k);
-        const double shrink = a.height * k - font.GetPixelSize().GetHeight();
-        // Printed in the fabric colour on the trim-coloured pocket / panel.
-        const bool onTrim = m_product.id == wxT("backpack");
-        DrawOutlinedText(gc, text, font, art.m_x + a.centerX * k, art.m_y + a.top * k + shrink / 2,
-                         onTrim ? c.fabric : c.trim, onTrim ? c.trim : c.fabric, 1.5 * k);
-        return;
-    }
-
-    // No room on the artwork: a stitched label tucked into the bottom-left corner.
-    const double pad = 10 * k + 6;
-    wxFont font = FitFont(gc, text, NameFace(text), true, art.m_width * 0.55, 30 * k + 8);
-    wxDouble tw, th;
-    gc->SetFont(font, c.trim);
-    gc->GetTextExtent(text, &tw, &th);
-    const double w = tw + pad * 2, h = th + pad * 1.4;
-    const double x = art.m_x + 4, y = art.m_y + art.m_height - h - 4;
-    gc->SetPen(*wxTRANSPARENT_PEN);
-    gc->SetBrush(wxBrush(c.fabric));
-    gc->DrawRoundedRectangle(x, y, w, h, h / 2);
-    wxPen stitch(c.trim, std::max(1, (int)(1.2 * k + 0.5)), wxPENSTYLE_SHORT_DASH);
-    gc->SetPen(stitch);
-    gc->SetBrush(*wxTRANSPARENT_BRUSH);
-    const double inset = pad * 0.35;
-    gc->DrawRoundedRectangle(x + inset, y + inset, w - 2 * inset, h - 2 * inset, (h - 2 * inset) / 2);
-    gc->SetFont(font, c.trim);
-    gc->DrawText(text, x + pad, y + (h - th) / 2);
-
-    // Small caption so it's clear this is where the stitching goes.
-    wxFont caption(wxFontInfo(wxSize(0, std::max(10, (int)(th * 0.42)))).FaceName(wxT("Microsoft JhengHei UI")));
-    wxDouble cw, ch;
-    gc->SetFont(caption, wxColour(110, 120, 138));
-    gc->GetTextExtent(wxT("刺繡預覽"), &cw, &ch);
-    gc->DrawText(wxT("刺繡預覽"), x + pad * 0.6, y - ch - 2);
+    const PrintArea& a = m_product.textArea;
+    wxFont font = FitFont(gc, text, NameFace(text), true, a.maxWidth * k, a.height * k);
+    const double shrink = a.height * k - font.GetPixelSize().GetHeight();
+    // On a trim-coloured pocket or band the print takes the fabric colour.
+    const bool onTrim = m_product.printOnTrim;
+    DrawOutlinedText(gc, text, font, art.m_x + a.centerX * k, art.m_y + a.top * k + shrink / 2,
+                     onTrim ? c.fabric : c.trim, onTrim ? c.trim : c.fabric, 1.5 * k);
 }
