@@ -1,0 +1,13 @@
+.vs/
+x64/
+Debug/
+Release/
+dist/
+*.obj
+*.pdb
+*.ilk
+*.aps
+*.suo
+*.user
+*.filters
+__pycache__/
