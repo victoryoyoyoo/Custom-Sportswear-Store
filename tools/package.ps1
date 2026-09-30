@@ -6,9 +6,9 @@
 #     CustomSportswearStore\README.txt
 #
 # Usage (from the repo root, in PowerShell):
-#   powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Version v2.0.0
+#   powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Version v2.2.0
 
-param([string]$Version = "v2.0.0")
+param([string]$Version = "v2.2.0")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -45,12 +45,20 @@ $readme = @"
    按「其他資訊」→「仍要執行」即可（程式沒有數位簽章才會出現這個提示）。
 
 操作小提示
+- 商品圖可以左右拖曳 360° 旋轉，雙擊回到正面。
 - F11 切換全螢幕，Esc 離開全螢幕。
 - 購物車可輸入優惠碼：WELCOME100（滿 NT`$1,000 折 NT`$100）、TEAM10（5 件以上 9 折）。
 - 單筆滿 NT`$2,000 免運費。
 - 本程式為課堂專題展示用途，不會實際收款或寄送商品。
 
 系統需求：Windows 10 / 11（64 位元）
+
+----
+Custom Sportswear Store $Version
+Unzip the whole folder anywhere and double-click CustomSportswearStore.exe.
+If Windows SmartScreen appears, choose "More info" > "Run anyway" (the app is not code-signed).
+Drag a product to turn it round; F11 toggles full screen. This is a demo: no payment or shipping happens.
+Requires 64-bit Windows 10 or 11.
 "@
 Set-Content -Path (Join-Path $out "README.txt") -Value $readme -Encoding UTF8
 
