@@ -94,21 +94,50 @@ void NameAndNumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, 
     grid->Add(m_name, 1, wxEXPAND);
     grid->AddGrowableCol(1, 1);
     sizer->Add(grid, 0, wxEXPAND);
+    sizer->AddSpacer(parent->FromDIP(8));
+    sizer->Add(Theme::MakeLabel(parent, wxT("隊名（印在正面，選填）"), 10, false, Theme::kMuted), 0, wxBOTTOM, parent->FromDIP(6));
+    m_team = MakeText(parent, 14, wxT("例如：TIGERS"));
+    sizer->Add(m_team, 0, wxEXPAND);
 
     BindChange(m_number, onChange);
     m_name->Bind(wxEVT_TEXT, [onChange](wxCommandEvent&) { onChange(); });
+    m_team->Bind(wxEVT_TEXT, [onChange](wxCommandEvent&) { onChange(); });
 }
+
+wxString NameAndNumberPersonalizer::Spec(int number, const wxString& name, const wxString& team) {
+    wxString s = wxString::Format(wxT("#%d"), number);
+    if (!name.IsEmpty()) s += wxT("・") + name;
+    if (!team.IsEmpty()) s += wxT("・正面 ") + team;
+    return s;
+}
+
+wxString NameAndNumberPersonalizer::TeamName() const { return Cleaned(m_team, true); }
 
 wxString NameAndNumberPersonalizer::PrintedName() const { return Cleaned(m_name, true); }
 
 wxString NameAndNumberPersonalizer::Describe() const {
-    wxString s = wxString::Format(wxT("#%d"), m_number->GetValue());
-    if (!PrintedName().IsEmpty()) s += wxT("・") + PrintedName();
-    return s;
+    return Spec(m_number->GetValue(), PrintedName(), TeamName());
 }
 
-void NameAndNumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c) const {
+void NameAndNumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c, bool front) const {
     const double k = art.m_width / m_product.artWidth;
+    if (front) {
+        // Team name across the chest, a smaller number under it.
+        const PrintArea& ta = m_product.teamArea;
+        const PrintArea& fn = m_product.frontNumberArea;
+        const wxString team = TeamName();
+        if (!team.IsEmpty()) {
+            wxFont teamFont = FitFont(gc, team, NameFace(team), true, ta.maxWidth * k, ta.height * k);
+            const double shrink = ta.height * k - teamFont.GetPixelSize().GetHeight();
+            DrawOutlinedText(gc, team, teamFont, art.m_x + ta.centerX * k, art.m_y + ta.top * k + shrink / 2,
+                             wxColour(255, 255, 255), c.trim, 3 * k);
+        }
+        wxFont numberFont(wxFontInfo(wxSize(0, (int)(fn.height * k))).FaceName(wxT("Impact")));
+        DrawOutlinedText(gc, wxString::Format(wxT("%d"), m_number->GetValue()), numberFont,
+                         art.m_x + fn.centerX * k, art.m_y + (team.IsEmpty() ? fn.top - 30 : fn.top) * k,
+                         wxColour(255, 255, 255), c.trim, 4 * k);
+        return;
+    }
     const PrintArea& num = m_product.numberArea;
     const PrintArea& nm = m_product.nameArea;
     const wxColour white(255, 255, 255);
@@ -139,7 +168,7 @@ wxString NumberPersonalizer::Describe() const {
     return wxString::Format(wxT("#%d"), m_number->GetValue());
 }
 
-void NumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c) const {
+void NumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c, bool) const {
     const double k = art.m_width / m_product.artWidth;
     const PrintArea& a = m_product.numberArea;
     wxFont font(wxFontInfo(wxSize(0, (int)(a.height * k))).FaceName(wxT("Impact")));
@@ -165,7 +194,7 @@ wxString TextPersonalizer::Describe() const {
     return Text().IsEmpty() ? wxString() : wxT("「") + Text() + wxT("」");
 }
 
-void TextPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c) const {
+void TextPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c, bool) const {
     const wxString text = Text();
     if (text.IsEmpty()) return;
     const double k = art.m_width / m_product.artWidth;

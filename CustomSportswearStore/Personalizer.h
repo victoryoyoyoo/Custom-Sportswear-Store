@@ -23,7 +23,8 @@ public:
     virtual wxString Describe() const { return wxString(); }
     // Draws onto the preview. `art` is where the product artwork was drawn
     // (in pixels); PrintArea values are scaled from artwork units into it.
-    virtual void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway) const {}
+    // `front` is true when the front view of the product is showing.
+    virtual void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, bool front) const {}
 
 protected:
     const Product& m_product;
@@ -32,14 +33,19 @@ protected:
 class NameAndNumberPersonalizer : public Personalizer {
 public:
     using Personalizer::Personalizer;
+
+    // "#23・WANG・正面 TIGERS" (empty parts left out). Shared with team orders.
+    static wxString Spec(int number, const wxString& name, const wxString& team);
+    wxString TeamName() const;
     void BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void()> onChange) override;
     wxString Describe() const override;
-    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway) const override;
+    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, bool front) const override;
 
 private:
     wxString PrintedName() const;
     wxSpinCtrl* m_number = nullptr;
     wxTextCtrl* m_name = nullptr;
+    wxTextCtrl* m_team = nullptr;
 };
 
 class NumberPersonalizer : public Personalizer {
@@ -47,7 +53,7 @@ public:
     using Personalizer::Personalizer;
     void BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void()> onChange) override;
     wxString Describe() const override;
-    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway) const override;
+    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, bool front) const override;
 
 private:
     wxSpinCtrl* m_number = nullptr;
@@ -61,7 +67,7 @@ public:
     using Personalizer::Personalizer;
     void BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void()> onChange) override;
     wxString Describe() const override;
-    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway) const override;
+    void Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& colorway, bool front) const override;
 
 private:
     wxString Text() const;

@@ -94,4 +94,7 @@ private:
 class OrderCompleteDialog : public wxDialog {
 public:
     OrderCompleteDialog(wxWindow* parent, const CheckoutDialog& info, const wxString& orderNumber);
+
+private:
+    void SaveReceipt(wxWindow* receipt, const wxString& orderNumber);
 };
