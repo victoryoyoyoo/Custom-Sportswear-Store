@@ -2,7 +2,7 @@
   <img src="assets/app_logo.png" width="84" alt="">
 </p>
 
-<h1 align="center">Custom Sportswear Store<br><sub>運動用品客製購物系統</sub></h1>
+<h1 align="center">Custom Sportswear Store</h1>
 
 <p align="center">
   A Windows desktop store for custom teamwear, written in C++17 with wxWidgets.<br>
@@ -124,7 +124,7 @@ python tools/gen_assets.py
 <details>
 <summary>中文說明</summary>
 
-以 C++17 與 wxWidgets 寫成的 Windows 桌面購物系統，主題是運動用品客製化。
+**運動用品客製購物系統**：以 C++17 與 wxWidgets 寫成的 Windows 桌面購物系統，主題是運動用品客製化。
 
 - 14 項商品、12 款原創配色，分類篩選、搜尋、收藏
 - 360° 預覽：拖曳商品可以轉一整圈；輸入姓名、背號或文字時，商品會自動轉到印製的位置
