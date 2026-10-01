@@ -1,5 +1,6 @@
 #pragma once
 #include <wx/wx.h>
+#include "Lang.h"
 #include <wx/datetime.h>
 #include <set>
 #include <vector>
@@ -118,7 +119,7 @@ struct CartItem {
 
     const Product& GetProduct() const { return Catalog::Products()[productIndex]; }
     const Colorway& GetColorway() const { return Catalog::Colorways()[colorwayIndex]; }
-    wxString Title() const { return GetProduct().name + wxT("・") + GetColorway().name; }
+    wxString Title() const { return GetProduct().name + L(wxT("・"), wxT(" · ")) + GetColorway().name; }
     int Subtotal() const { return unitPrice * quantity; }
     bool SameProductAs(const CartItem& o) const {
         return productIndex == o.productIndex && colorwayIndex == o.colorwayIndex && spec == o.spec;

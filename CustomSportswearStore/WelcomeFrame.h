@@ -5,10 +5,11 @@
 // turning in 3D.
 class WelcomeFrame : public wxFrame {
 public:
-    explicit WelcomeFrame(const wxString& title);
+    WelcomeFrame();
 
 private:
     void EnterStore();
+    void SwitchLanguage();
 
     bool m_entering = false;
 };

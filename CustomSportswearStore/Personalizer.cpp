@@ -1,4 +1,5 @@
 #include "Personalizer.h"
+#include "Lang.h"
 #include "Theme.h"
 #include <algorithm>
 #include <cmath>
@@ -104,18 +105,18 @@ std::unique_ptr<Personalizer> Personalizer::For(const Product& product) {
 // ---------------------------------------------------------------------------
 void NameAndNumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int)> onChange) {
     wxFlexGridSizer* grid = new wxFlexGridSizer(2, 2, parent->FromDIP(6), parent->FromDIP(16));
-    grid->Add(Theme::MakeLabel(parent, wxT("背號（0–99）"), 10, false, Theme::kMuted));
-    grid->Add(Theme::MakeLabel(parent, wxString::Format(wxT("印製姓名（選填，最多 %d 字）"), m_product.maxTextLength),
+    grid->Add(Theme::MakeLabel(parent, L(wxT("背號（0–99）"), wxT("Number (0–99)")), 10, false, Theme::kMuted));
+    grid->Add(Theme::MakeLabel(parent, wxString::Format(L(wxT("印製姓名（選填，最多 %d 字）"), wxT("Name (optional, up to %d characters)")), m_product.maxTextLength),
                                10, false, Theme::kMuted));
     m_number = MakeNumberSpin(parent, 23);
-    m_name = MakeText(parent, m_product.maxTextLength, wxT("例如：WANG"));
+    m_name = MakeText(parent, m_product.maxTextLength, L(wxT("例如：WANG"), wxT("e.g. WANG")));
     grid->Add(m_number);
     grid->Add(m_name, 1, wxEXPAND);
     grid->AddGrowableCol(1, 1);
     sizer->Add(grid, 0, wxEXPAND);
     sizer->AddSpacer(parent->FromDIP(8));
-    sizer->Add(Theme::MakeLabel(parent, wxT("隊名（印在正面，選填）"), 10, false, Theme::kMuted), 0, wxBOTTOM, parent->FromDIP(6));
-    m_team = MakeText(parent, 14, wxT("例如：TIGERS"));
+    sizer->Add(Theme::MakeLabel(parent, L(wxT("隊名（印在正面，選填）"), wxT("Team name (printed on the front, optional)")), 10, false, Theme::kMuted), 0, wxBOTTOM, parent->FromDIP(6));
+    m_team = MakeText(parent, 14, L(wxT("例如：TIGERS"), wxT("e.g. TIGERS")));
     sizer->Add(m_team, 0, wxEXPAND);
 
     // Name and number go on the back (the side the page opens on), the team on the front.
@@ -126,8 +127,8 @@ void NameAndNumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, 
 
 wxString NameAndNumberPersonalizer::Spec(int number, const wxString& name, const wxString& team) {
     wxString s = wxString::Format(wxT("#%d"), number);
-    if (!name.IsEmpty()) s += wxT("・") + name;
-    if (!team.IsEmpty()) s += wxT("・正面 ") + team;
+    if (!name.IsEmpty()) s += L(wxT("・"), wxT(" · ")) + name;
+    if (!team.IsEmpty()) s += L(wxT("・正面 "), wxT(" · front ")) + team;
     return s;
 }
 
@@ -178,7 +179,7 @@ void NameAndNumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble
 // Number only (shorts)
 // ---------------------------------------------------------------------------
 void NumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int)> onChange) {
-    sizer->Add(Theme::MakeLabel(parent, wxT("背號（0–99）"), 10, false, Theme::kMuted), 0, wxBOTTOM, parent->FromDIP(6));
+    sizer->Add(Theme::MakeLabel(parent, L(wxT("背號（0–99）"), wxT("Number (0–99)")), 10, false, Theme::kMuted), 0, wxBOTTOM, parent->FromDIP(6));
     m_number = MakeNumberSpin(parent, 23);
     sizer->Add(m_number);
     BindChange(m_number, onChange, m_product.printSide);
@@ -201,10 +202,10 @@ void NumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, 
 // Short text (tee, hoodie, backpack, towel; balls, cap, bands, bottle in 3D)
 // ---------------------------------------------------------------------------
 void TextPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int)> onChange) {
-    sizer->Add(Theme::MakeLabel(parent, wxString::Format(wxT("最多 %d 字，中英文皆可"), m_product.maxTextLength),
+    sizer->Add(Theme::MakeLabel(parent, wxString::Format(L(wxT("最多 %d 字，中英文皆可"), wxT("Up to %d characters")), m_product.maxTextLength),
                                 10, false, Theme::kMuted),
                0, wxBOTTOM, parent->FromDIP(6));
-    m_text = MakeText(parent, m_product.maxTextLength, wxT("例如：TEAM WANG"));
+    m_text = MakeText(parent, m_product.maxTextLength, L(wxT("例如：TEAM WANG"), wxT("e.g. TEAM WANG")));
     sizer->Add(m_text, 0, wxEXPAND);
     BindChange(m_text, onChange, m_product.printSide);
 }
@@ -212,7 +213,7 @@ void TextPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::func
 wxString TextPersonalizer::Text() const { return Cleaned(m_text, false); }
 
 wxString TextPersonalizer::Describe() const {
-    return Text().IsEmpty() ? wxString() : wxT("「") + Text() + wxT("」");
+    return Text().IsEmpty() ? wxString() : L(wxT("「"), wxT("\"")) + Text() + L(wxT("」"), wxT("\""));
 }
 
 wxString TextPersonalizer::PrintText() const { return Text(); }

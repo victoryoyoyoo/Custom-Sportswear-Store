@@ -1,4 +1,5 @@
 #include "Theme.h"
+#include "Lang.h"
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 #include <wx/dcbuffer.h>
@@ -11,7 +12,8 @@ namespace Theme {
 
 wxFont Font(int pointSize, bool bold) {
     wxFontInfo info(pointSize);
-    info.FaceName(wxT("Microsoft JhengHei UI"));
+    // Segoe UI for English; Chinese text still falls back to a Chinese face.
+    info.FaceName(Lang::English() ? wxT("Segoe UI") : wxT("Microsoft JhengHei UI"));
     if (bold) info.Bold();
     return wxFont(info);
 }
@@ -135,13 +137,13 @@ int ShowModalDialog(wxDialog& dialog) {
 
 bool Confirm(wxWindow* parent, const wxString& title, const wxString& message, const wxString& yes) {
     wxMessageDialog dialog(parent, message, title, wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION);
-    dialog.SetYesNoLabels(yes, wxT("取消"));
+    dialog.SetYesNoLabels(yes, L(wxT("取消"), wxT("Cancel")));
     return ShowModalDialog(dialog) == wxID_YES;
 }
 
 void Inform(wxWindow* parent, const wxString& title, const wxString& message, bool warning) {
     wxMessageDialog dialog(parent, message, title, wxOK | (warning ? wxICON_WARNING : wxICON_INFORMATION));
-    dialog.SetOKLabel(wxT("好"));
+    dialog.SetOKLabel(L(wxT("好"), wxT("OK")));
     ShowModalDialog(dialog);
 }
 
@@ -167,12 +169,12 @@ void InstallFullScreenKeys(wxFrame* frame) {
 
 Widgets::FlatButton* MakeFullScreenButton(wxFrame* frame, wxWindow* parent) {
     Widgets::FlatButton* button = MakeHeaderButton(parent);
-    button->SetToolTip(wxT("快捷鍵 F11；全螢幕時按 Esc 離開"));
+    button->SetToolTip(L(wxT("快捷鍵 F11；全螢幕時按 Esc 離開"), wxT("Shortcut F11; Esc leaves full screen")));
     button->Bind(wxEVT_BUTTON, [frame](wxCommandEvent&) { frame->ShowFullScreen(!frame->IsFullScreen()); });
     // The state can change from the keyboard or from ShowLike(), so the label
     // follows the window size instead of the click.
     auto sync = [frame, button] {
-        button->SetLabel(frame->IsFullScreen() ? wxT("  結束全螢幕  ") : wxT("  全螢幕  "));
+        button->SetLabel(frame->IsFullScreen() ? L(wxT("  結束全螢幕  "), wxT("  Exit full screen  ")) : L(wxT("  全螢幕  "), wxT("  Full screen  ")));
         button->GetParent()->Layout();
     };
     frame->Bind(wxEVT_SIZE, [sync](wxSizeEvent& event) {

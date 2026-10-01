@@ -1,4 +1,5 @@
 #include "ProductDialogs.h"
+#include "Lang.h"
 #include "Theme.h"
 #include <wx/clipbrd.h>
 #include <wx/statline.h>
@@ -11,13 +12,13 @@
 // SizeAdvisorDialog
 // ===========================================================================
 SizeAdvisorDialog::SizeAdvisorDialog(wxWindow* parent, const Product& product)
-    : wxDialog(parent, wxID_ANY, wxT("尺寸建議｜運動用品客製購物系統")), m_product(product) {
+    : wxDialog(parent, wxID_ANY, L(wxT("尺寸建議｜運動用品客製購物系統"), wxT("Size Advice | Custom Sportswear Store"))), m_product(product) {
     SetBackgroundColour(Theme::kPage);
     wxBoxSizer* root = new wxBoxSizer(wxVERTICAL);
     const bool shoes = product.sizeAdvice == SizeAdvice::Shoes;
-    root->Add(Theme::MakeHeader(this, wxT("尺寸建議"),
-                                shoes ? wxString(wxT("量一下腳長（腳跟到最長的腳趾）"))
-                                      : wxString(wxT("輸入身高與體重，推薦最接近的尺寸"))),
+    root->Add(Theme::MakeHeader(this, L(wxT("尺寸建議"), wxT("Size advice")),
+                                shoes ? wxString(L(wxT("量一下腳長（腳跟到最長的腳趾）"), wxT("Measure your foot, heel to longest toe")))
+                                      : wxString(L(wxT("輸入身高與體重，推薦最接近的尺寸"), wxT("Enter height and weight for the closest size")))),
               0, wxEXPAND);
 
     Widgets::Card* card = Theme::MakeCard(this);
@@ -31,7 +32,7 @@ SizeAdvisorDialog::SizeAdvisorDialog(wxWindow* parent, const Product& product)
     if (shoes) {
         m_footLength = new wxSpinCtrlDouble(card, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(120, -1)),
                                             wxSP_ARROW_KEYS, 22.0, 30.0, 26.0, 0.5);
-        addField(wxT("腳長（cm）"), m_footLength);
+        addField(L(wxT("腳長（cm）"), wxT("Foot length (cm)")), m_footLength);
         m_footLength->Bind(wxEVT_SPINCTRLDOUBLE, [this](wxSpinDoubleEvent&) { Recalculate(); });
         m_footLength->Bind(wxEVT_TEXT, [this](wxCommandEvent&) { Recalculate(); });
     } else {
@@ -39,8 +40,8 @@ SizeAdvisorDialog::SizeAdvisorDialog(wxWindow* parent, const Product& product)
                                   wxSP_ARROW_KEYS, 120, 210, 172);
         m_weight = new wxSpinCtrl(card, wxID_ANY, wxT("65"), wxDefaultPosition, FromDIP(wxSize(120, -1)),
                                   wxSP_ARROW_KEYS, 30, 150, 65);
-        addField(wxT("身高（cm）"), m_height);
-        addField(wxT("體重（kg）"), m_weight);
+        addField(L(wxT("身高（cm）"), wxT("Height (cm)")), m_height);
+        addField(L(wxT("體重（kg）"), wxT("Weight (kg)")), m_weight);
         for (wxSpinCtrl* spin : { m_height, m_weight }) {
             spin->Bind(wxEVT_SPINCTRL, [this](wxSpinEvent&) { Recalculate(); });
             spin->Bind(wxEVT_TEXT, [this](wxCommandEvent&) { Recalculate(); });
@@ -48,13 +49,13 @@ SizeAdvisorDialog::SizeAdvisorDialog(wxWindow* parent, const Product& product)
     }
     body->Add(form, 0, wxALIGN_CENTER);
     body->Add(new wxStaticLine(card), 0, wxEXPAND | wxTOP | wxBOTTOM, FromDIP(18));
-    body->Add(Theme::MakeLabel(card, wxT("建議尺寸"), 10, false, Theme::kMuted), 0, wxALIGN_CENTER);
+    body->Add(Theme::MakeLabel(card, L(wxT("建議尺寸"), wxT("Suggested size")), 10, false, Theme::kMuted), 0, wxALIGN_CENTER);
     m_result = Theme::MakeLabel(card, wxEmptyString, 26, true, Theme::kOrange);
     body->Add(m_result, 0, wxALIGN_CENTER | wxTOP, FromDIP(4));
     m_detail = Theme::MakeLabel(card, wxEmptyString, 10, false, Theme::kMuted);
     body->Add(m_detail, 0, wxALIGN_CENTER | wxTOP, FromDIP(6));
-    body->Add(Theme::MakeLabel(card, shoes ? wxString(wxT("兩個尺寸之間時選大一號，穿厚襪也比較舒服"))
-                                           : wxString(wxT("喜歡寬鬆一點的穿法，可以再選大一號")),
+    body->Add(Theme::MakeLabel(card, shoes ? wxString(L(wxT("兩個尺寸之間時選大一號，穿厚襪也比較舒服"), wxT("Between sizes? Go up one, it's comfier with thick socks")))
+                                           : wxString(L(wxT("喜歡寬鬆一點的穿法，可以再選大一號"), wxT("Prefer a looser fit? Go up one size"))),
                                9, false, Theme::kMuted),
               0, wxALIGN_CENTER | wxTOP, FromDIP(12));
     wxBoxSizer* pad = new wxBoxSizer(wxVERTICAL);
@@ -63,8 +64,8 @@ SizeAdvisorDialog::SizeAdvisorDialog(wxWindow* parent, const Product& product)
     root->Add(card, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(16));
 
     wxBoxSizer* footer = new wxBoxSizer(wxHORIZONTAL);
-    auto* cancel = Theme::MakeSecondaryButton(this, wxT("取消"), 11);
-    auto* apply = Theme::MakePrimaryButton(this, wxT("套用這個尺寸"), 12);
+    auto* cancel = Theme::MakeSecondaryButton(this, L(wxT("取消"), wxT("Cancel")), 11);
+    auto* apply = Theme::MakePrimaryButton(this, L(wxT("套用這個尺寸"), wxT("Use this size")), 12);
     footer->AddStretchSpacer();
     footer->Add(cancel, 0, wxALIGN_CENTER_VERTICAL);
     footer->Add(apply, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(10));
@@ -106,13 +107,13 @@ void SizeAdvisorDialog::Recalculate() {
 // ===========================================================================
 TeamOrderDialog::TeamOrderDialog(wxWindow* parent, const Product& product, const Colorway& colorway,
                                  const wxString& team)
-    : wxDialog(parent, wxID_ANY, wxT("團體訂購｜運動用品客製購物系統"), wxDefaultPosition, wxDefaultSize,
+    : wxDialog(parent, wxID_ANY, L(wxT("團體訂購｜運動用品客製購物系統"), wxT("Team Order | Custom Sportswear Store")), wxDefaultPosition, wxDefaultSize,
                wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER),
       m_product(product) {
     SetBackgroundColour(Theme::kPage);
     wxBoxSizer* root = new wxBoxSizer(wxVERTICAL);
-    root->Add(Theme::MakeHeader(this, wxT("團體訂購"),
-                                wxString::Format(wxT("%s・%s，每件 %s，5 件以上可用 TEAM10 打 9 折"),
+    root->Add(Theme::MakeHeader(this, L(wxT("團體訂購"), wxT("Team order")),
+                                wxString::Format(L(wxT("%s・%s，每件 %s，5 件以上可用 TEAM10 打 9 折"), wxT("%s · %s, %s each, TEAM10 takes 10%% off 5 or more")),
                                                  product.name, colorway.name, Theme::FormatPrice(product.price))),
               0, wxEXPAND);
 
@@ -120,11 +121,11 @@ TeamOrderDialog::TeamOrderDialog(wxWindow* parent, const Product& product, const
     wxBoxSizer* body = new wxBoxSizer(wxVERTICAL);
 
     wxBoxSizer* teamRow = new wxBoxSizer(wxHORIZONTAL);
-    teamRow->Add(Theme::MakeLabel(card, wxT("隊名（印在正面）"), 11, false, Theme::kMuted), 0, wxALIGN_CENTER_VERTICAL);
+    teamRow->Add(Theme::MakeLabel(card, L(wxT("隊名（印在正面）"), wxT("Team name (front)")), 11, false, Theme::kMuted), 0, wxALIGN_CENTER_VERTICAL);
     m_team = new wxTextCtrl(card, wxID_ANY, team);
     m_team->SetFont(Theme::Font(11));
     m_team->SetMaxLength(14);
-    m_team->SetHint(wxT("選填，例如：TIGERS"));
+    m_team->SetHint(L(wxT("選填，例如：TIGERS"), wxT("Optional, e.g. TIGERS")));
     teamRow->Add(m_team, 1, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(12));
     body->Add(teamRow, 0, wxEXPAND);
 
@@ -136,9 +137,9 @@ TeamOrderDialog::TeamOrderDialog(wxWindow* parent, const Product& product, const
         head->Add(t, proportion, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
     };
     title(wxT("#"), 26, 0);
-    title(wxT("印製姓名"), 160, 1);
-    title(wxT("背號"), 90, 0);
-    title(wxT("尺寸"), 80, 0);
+    title(L(wxT("印製姓名"), wxT("Name")), 160, 1);
+    title(L(wxT("背號"), wxT("Number")), 90, 0);
+    title(L(wxT("尺寸"), wxT("Size")), 80, 0);
     title(wxEmptyString, 36, 0);
     body->Add(head, 0, wxEXPAND | wxTOP, FromDIP(18));
     body->Add(new wxStaticLine(card), 0, wxEXPAND | wxTOP | wxBOTTOM, FromDIP(6));
@@ -151,9 +152,9 @@ TeamOrderDialog::TeamOrderDialog(wxWindow* parent, const Product& product, const
     body->Add(m_list, 1, wxEXPAND);
 
     wxBoxSizer* tools = new wxBoxSizer(wxHORIZONTAL);
-    auto* addRow = Theme::MakeSecondaryButton(card, wxT("＋ 新增球員"), 10);
-    auto* paste = Theme::MakeSecondaryButton(card, wxT("貼上名單"), 10);
-    paste->SetToolTip(wxT("從 Excel 或記事本複製「姓名、背號、尺寸」，一行一位"));
+    auto* addRow = Theme::MakeSecondaryButton(card, L(wxT("＋ 新增球員"), wxT("＋ Add player")), 10);
+    auto* paste = Theme::MakeSecondaryButton(card, L(wxT("貼上名單"), wxT("Paste roster")), 10);
+    paste->SetToolTip(L(wxT("從 Excel 或記事本複製「姓名、背號、尺寸」，一行一位"), wxT("Copy name, number, size from Excel or Notepad, one player per line")));
     tools->Add(addRow);
     tools->Add(paste, 0, wxLEFT, FromDIP(8));
     tools->AddStretchSpacer();
@@ -170,8 +171,8 @@ TeamOrderDialog::TeamOrderDialog(wxWindow* parent, const Product& product, const
     m_summary = Theme::MakeLabel(this, wxEmptyString, 12, true);
     footer->Add(m_summary, 0, wxALIGN_CENTER_VERTICAL);
     footer->AddStretchSpacer();
-    auto* cancel = Theme::MakeSecondaryButton(this, wxT("取消"), 11);
-    m_confirm = Theme::MakePrimaryButton(this, wxT("全部加入購物車（0 件）"), 12);
+    auto* cancel = Theme::MakeSecondaryButton(this, L(wxT("取消"), wxT("Cancel")), 11);
+    m_confirm = Theme::MakePrimaryButton(this, L(wxT("全部加入購物車（0 件）"), wxT("Add all to cart (0)")), 12);
     m_confirm->ShowArrow();
     footer->Add(cancel, 0, wxALIGN_CENTER_VERTICAL);
     footer->Add(m_confirm, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(10));
@@ -208,7 +209,7 @@ void TeamOrderDialog::AddRow(const wxString& name, int number, int sizeIndex) {
     wxTextCtrl* nameCtrl = new wxTextCtrl(panel, wxID_ANY, name);
     nameCtrl->SetFont(Theme::Font(11));
     nameCtrl->SetMaxLength(12);
-    nameCtrl->SetHint(wxT("例如：WANG"));
+    nameCtrl->SetHint(L(wxT("例如：WANG"), wxT("e.g. WANG")));
     wxSpinCtrl* numberCtrl = new wxSpinCtrl(panel, wxID_ANY, wxString::Format(wxT("%d"), number), wxDefaultPosition,
                                             FromDIP(wxSize(90, -1)), wxSP_ARROW_KEYS, 0, 99, number);
     numberCtrl->SetFont(Theme::Font(11));
@@ -219,7 +220,7 @@ void TeamOrderDialog::AddRow(const wxString& name, int number, int sizeIndex) {
     sizeCtrl->SetSelection(std::clamp(sizeIndex, 0, (int)sizes.size() - 1));
     auto* remove = Theme::MakeSecondaryButton(panel, wxT("✕"), 10);
     remove->SetMinSize(FromDIP(wxSize(36, 32)));
-    remove->SetToolTip(wxT("移除這位球員"));
+    remove->SetToolTip(L(wxT("移除這位球員"), wxT("Remove this player")));
 
     row->Add(index, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
     row->Add(nameCtrl, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
@@ -280,7 +281,7 @@ void TeamOrderDialog::PasteRoster() {
         pasted.push_back(p);
     }
     if (pasted.empty()) {
-        m_warning->SetLabel(wxT("剪貼簿裡沒有名單：請複製「姓名 背號 尺寸」，一行一位"));
+        m_warning->SetLabel(L(wxT("剪貼簿裡沒有名單：請複製「姓名 背號 尺寸」，一行一位"), wxT("No roster on the clipboard: copy \"name number size\", one per line")));
         Layout();
         return;
     }
@@ -304,11 +305,11 @@ void TeamOrderDialog::RefreshSummary() {
     }
     wxString duplicates;
     for (const auto& [number, count] : numbersUsed)
-        if (count > 1) duplicates += (duplicates.IsEmpty() ? wxString() : wxString(wxT("、"))) + wxString::Format(wxT("%d"), number);
-    m_warning->SetLabel(duplicates.IsEmpty() ? wxString() : wxT("背號重複：") + duplicates);
-    m_summary->SetLabel(wxString::Format(wxT("%d 件・%s"), filled, Theme::FormatPrice(filled * m_product.price)));
+        if (count > 1) duplicates += (duplicates.IsEmpty() ? wxString() : wxString(L(wxT("、"), wxT(", ")))) + wxString::Format(wxT("%d"), number);
+    m_warning->SetLabel(duplicates.IsEmpty() ? wxString() : L(wxT("背號重複："), wxT("Duplicate numbers: ")) + duplicates);
+    m_summary->SetLabel(wxString::Format(L(wxT("%d 件・%s"), wxT("%d · %s")), filled, Theme::FormatPrice(filled * m_product.price)));
     m_confirm->Enable(filled > 0);
-    m_confirm->SetLabel(wxString::Format(wxT("全部加入購物車（%d 件）"), filled));
+    m_confirm->SetLabel(wxString::Format(L(wxT("全部加入購物車（%d 件）"), wxT("Add all to cart (%d)")), filled));
     Layout();
 }
 
