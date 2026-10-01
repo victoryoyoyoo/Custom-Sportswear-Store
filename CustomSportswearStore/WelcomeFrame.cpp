@@ -1,4 +1,5 @@
 #include "WelcomeFrame.h"
+#include "Lang.h"
 #include "LauncherFrame.h"
 #include "Personalizer.h"
 #include "Showcase.h"
@@ -159,14 +160,21 @@ namespace {
     };
 }
 
-WelcomeFrame::WelcomeFrame(const wxString& title)
-    : wxFrame(nullptr, wxID_ANY, title) {
+WelcomeFrame::WelcomeFrame()
+    : wxFrame(nullptr, wxID_ANY, L(wxT("運動用品客製購物系統 Custom Sportswear Store"), wxT("Custom Sportswear Store"))) {
     SetIcon(wxICON(aaaa_app));
     Theme::InstallFullScreenKeys(this);
 
     wxPanel* panel = new wxPanel(this, wxID_ANY);
     panel->SetBackgroundColour(Theme::kNavy);
     wxBoxSizer* root = new wxBoxSizer(wxVERTICAL);
+
+    // Language switch, top right. It names the other language, in that language.
+    auto* language = new Widgets::FlatButton(panel, Lang::English() ? wxString(wxT("中文")) : wxString(wxT("English")),
+                                             Widgets::FlatButton::Style::OnDark, 10, 34);
+    language->SetMinSize(FromDIP(wxSize(96, 34)));
+    root->Add(language, 0, wxALIGN_RIGHT | wxTOP | wxRIGHT, FromDIP(14));
+
     wxBoxSizer* body = new wxBoxSizer(wxHORIZONTAL);
 
     // ---- left: name, what the store does, the way in ----
@@ -176,25 +184,26 @@ WelcomeFrame::WelcomeFrame(const wxString& title)
     bar->SetBackgroundColour(Theme::kOrange);
     titleRow->Add(bar, 0, wxEXPAND | wxRIGHT, FromDIP(16));
     wxBoxSizer* names = new wxBoxSizer(wxVERTICAL);
-    names->Add(Theme::MakeLabel(panel, wxT("運動用品客製購物系統"), 26, true, Theme::kOnDark));
-    names->Add(Theme::MakeLabel(panel, wxT("C U S T O M   S P O R T S W E A R   S T O R E"), 9, true, Theme::kOnDarkMuted),
+    names->Add(Theme::MakeLabel(panel, L(wxT("運動用品客製購物系統"), wxT("Custom Sportswear Store")), 26, true, Theme::kOnDark));
+    names->Add(Theme::MakeLabel(panel, L(wxT("C U S T O M   S P O R T S W E A R   S T O R E"),
+                                                 wxT("T E A M W E A R   ·   M A D E   T O   O R D E R")), 9, true, Theme::kOnDarkMuted),
                0, wxTOP, FromDIP(6));
     titleRow->Add(names, 0, wxALIGN_CENTER_VERTICAL);
     text->Add(titleRow);
 
-    text->Add(Theme::MakeLabel(panel, wxString::Format(wxT("%zu 項商品・%zu 款配色・360° 即時預覽"),
+    text->Add(Theme::MakeLabel(panel, wxString::Format(L(wxT("%zu 項商品・%zu 款配色・360° 即時預覽"), wxT("%zu products · %zu colourways · live 360° preview")),
                                                        Catalog::Products().size(), Catalog::Colorways().size()),
                                13, false, wxColour(222, 228, 240)),
               0, wxTOP, FromDIP(34));
-    text->Add(Theme::MakeLabel(panel, wxT("球衣、球鞋到水壺，印上名字前先轉一圈看清楚。"), 11, false, Theme::kOnDarkMuted),
+    text->Add(Theme::MakeLabel(panel, L(wxT("球衣、球鞋到水壺，印上名字前先轉一圈看清楚。"), wxT("From jerseys to bottles: turn it round before your name goes on.")), 11, false, Theme::kOnDarkMuted),
               0, wxTOP, FromDIP(8));
 
     wxBoxSizer* pills = new wxBoxSizer(wxHORIZONTAL);
-    for (const wxChar* label : { wxT("360° 預覽"), wxT("客製印字"), wxT("團體訂購"), wxT("滿額免運") })
+    for (const wxString& label : { L(wxT("360° 預覽"), wxT("360° view")), L(wxT("客製印字"), wxT("Custom print")), L(wxT("團體訂購"), wxT("Team order")), L(wxT("滿額免運"), wxT("Free shipping")) })
         pills->Add(MakePill(panel, label), 0, wxRIGHT, FromDIP(8));
     text->Add(pills, 0, wxTOP, FromDIP(22));
 
-    auto* enter = Theme::MakePrimaryButton(panel, wxT("進入商店"), 13);
+    auto* enter = Theme::MakePrimaryButton(panel, L(wxT("進入商店"), wxT("Enter the store")), 13);
     enter->ShowArrow();
     enter->SetMinSize(FromDIP(wxSize(230, 52)));
     text->Add(enter, 0, wxTOP, FromDIP(36));
@@ -206,7 +215,7 @@ WelcomeFrame::WelcomeFrame(const wxString& title)
     body->Add(stage, 1, wxEXPAND | wxTOP | wxRIGHT, FromDIP(12));
     root->Add(body, 1, wxEXPAND);
 
-    root->Add(Theme::MakeLabel(panel, wxString::Format(wxT("單筆滿 %s 免運・F11 全螢幕"),
+    root->Add(Theme::MakeLabel(panel, wxString::Format(L(wxT("單筆滿 %s 免運・F11 全螢幕"), wxT("Free shipping over %s · F11 full screen")),
                                                        Theme::FormatPrice(Catalog::kFreeShippingThreshold)),
                                9, false, wxColour(112, 126, 152)),
               0, wxALIGN_CENTER | wxTOP | wxBOTTOM, FromDIP(14));
@@ -216,9 +225,19 @@ WelcomeFrame::WelcomeFrame(const wxString& title)
     SetMinClientSize(FromDIP(wxSize(900, 500)));
     Centre();
 
+    language->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { SwitchLanguage(); });
     enter->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EnterStore(); });
     stage->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent&) { EnterStore(); });
     enter->SetFocus();  // Enter / Space works right away
+}
+
+void WelcomeFrame::SwitchLanguage() {
+    // Every window builds its text when it is created, so the welcome screen
+    // is simply built again in the other language. Nothing else is open yet.
+    if (m_entering) return;
+    m_entering = true;
+    Lang::SetEnglish(!Lang::English());
+    Theme::ShowLike(new WelcomeFrame(), this, [this] { Destroy(); });
 }
 
 void WelcomeFrame::EnterStore() {

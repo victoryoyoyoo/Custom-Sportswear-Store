@@ -45,6 +45,10 @@
 - Three-step checkout with inline validation, home delivery or convenience-store pickup
 - Order confirmation you can save as an image, and an order history
 
+**English and Chinese**
+- The whole interface comes in both languages. It opens in your Windows language and
+  remembers the one you pick with the switch on the welcome screen.
+
 **Feel**
 - Custom-drawn buttons, chips, swatches, cards and progress bars, with smooth transitions
 - Staggered fade-in on the product list, crossfades between colourways, a welcome screen with a
@@ -78,6 +82,7 @@ WelcomeFrame ──► LauncherFrame (product list) ──► ProductFrame (any 
 Data     Catalog       products, colourways and coupons as tables; cart, orders, favourites
 3D       Showcase      one model per product shape: wrapped artwork, sphere, cap, cylinder
 Look     Theme / Widgets / SwatchPicker   palette, fonts, custom-drawn controls, animation
+Text     Lang          every label in Chinese and English
 ```
 
 - **Data-driven catalogue.** Every product is one row in `Catalog.cpp`: name, price, sizes,

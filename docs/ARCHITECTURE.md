@@ -1,6 +1,6 @@
 # How the store is built
 
-About 6,700 lines: C++17 on wxWidgets 3.3 for the app, plus one Python script that draws the
+About 6,800 lines: C++17 on wxWidgets 3.3 for the app, plus one Python script that draws the
 artwork. This page walks through the pieces in the order a customer meets them.
 
 ## Windows
@@ -89,6 +89,17 @@ product's `Shape`:
 All of them use one light from the upper left, premultiplied RGBA and bilinear sampling. The
 stage behind the product (a light backdrop and a soft contact shadow) is drawn by `DrawStage` and
 `DrawShadow`; `Still` and `Tile` reuse the models for cart thumbnails and product-list cards.
+
+## Two languages: `Lang`
+
+Every piece of text is written once in both languages, side by side:
+`L(wxT("加入購物車"), wxT("Add to cart"))` returns the one in use. Keeping the pair together
+means a translation can't drift from its original or go missing. The first run follows the
+Windows language; the switch on the welcome screen changes it and saves the choice.
+
+Windows build their text when they are created, so switching simply rebuilds the welcome screen.
+The catalogue tables are rebuilt too, but row by row in place, so anything already holding a
+reference to a row stays valid.
 
 ## Look and feel: `Theme`, `Widgets`, `SwatchPicker`
 

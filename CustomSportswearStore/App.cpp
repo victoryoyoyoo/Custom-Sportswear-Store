@@ -1,14 +1,16 @@
 #include <wx/wx.h>
 #include "WelcomeFrame.h"
+#include "Lang.h"
 #include "Widgets.h"
 
 class StoreApp : public wxApp {
 public:
     bool OnInit() override {
         if (!wxApp::OnInit()) return false;
+        SetAppName(wxT("CustomSportswearStore"));  // registry key for saved settings, whatever the exe is called
         wxInitAllImageHandlers();
-        SetAppDisplayName(wxT("運動用品客製購物系統"));
-        WelcomeFrame* frame = new WelcomeFrame(wxT("運動用品客製購物系統 Custom Sportswear Store"));
+        SetAppDisplayName(L(wxT("運動用品客製購物系統"), wxT("Custom Sportswear Store")));
+        WelcomeFrame* frame = new WelcomeFrame();
         Widgets::FadeIn(frame, [frame] { frame->Show(); });
         return true;
     }

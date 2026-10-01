@@ -1,4 +1,5 @@
 #include "Turntable.h"
+#include "Lang.h"
 #include "Theme.h"
 #include <wx/dcbuffer.h>
 #include <wx/graphics.h>
@@ -17,7 +18,7 @@ Turntable::Turntable(wxWindow* parent, const wxSize& minDipSize, Builder builder
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     SetMinSize(FromDIP(minDipSize));
     SetCursor(wxCursor(wxCURSOR_SIZEWE));
-    SetToolTip(wxT("左右拖曳可 360° 旋轉，雙擊回到正面"));
+    SetToolTip(L(wxT("左右拖曳可 360° 旋轉，雙擊回到正面"), wxT("Drag sideways to turn it round; double-click to face front")));
 
     Bind(wxEVT_PAINT, &Turntable::OnPaint, this);
     Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
@@ -205,7 +206,7 @@ void Turntable::OnPaint(wxPaintEvent&) {
 
     // "Drag to turn" pill at the bottom until the customer has tried it.
     if (m_hint > 0.01) {
-        const wxString label = wxT("⟲  拖曳旋轉 360°");
+        const wxString label = L(wxT("⟲  拖曳旋轉 360°"), wxT("⟲  Drag to turn 360°"));
         gc->SetFont(Theme::Font(9, true), wxColour(90, 100, 118, (unsigned char)(255 * m_hint)));
         wxDouble w, h;
         gc->GetTextExtent(label, &w, &h);

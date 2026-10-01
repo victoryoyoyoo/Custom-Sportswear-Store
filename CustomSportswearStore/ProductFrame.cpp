@@ -1,4 +1,5 @@
 #include "ProductFrame.h"
+#include "Lang.h"
 #include "CartDialog.h"
 #include "ProductDialogs.h"
 #include "SwatchPicker.h"
@@ -12,7 +13,7 @@ namespace {
 }
 
 ProductFrame::ProductFrame(wxWindow* parent, int productIndex)
-    : wxFrame(parent, wxID_ANY, Catalog::Products()[productIndex].name + wxT("｜運動用品客製購物系統")),
+    : wxFrame(parent, wxID_ANY, Catalog::Products()[productIndex].name + L(wxT("｜運動用品客製購物系統"), wxT(" | Custom Sportswear Store"))),
       m_productIndex(productIndex),
       m_personalizer(Personalizer::For(Catalog::Products()[productIndex])) {
     SetIcon(wxICON(aaaa_app));
@@ -47,11 +48,11 @@ void ProductFrame::BuildLayout() {
 
     // ---- header ----
     wxBoxSizer* headerRight = nullptr;
-    wxPanel* header = Theme::MakeHeader(root, product.name, product.englishName + wxT("  ·  ") + product.tagline,
+    wxPanel* header = Theme::MakeHeader(root, product.name, Lang::English() ? product.tagline : product.englishName + wxT("  ·  ") + product.tagline,
                                         &headerRight);
     headerRight->Add(Theme::MakeFullScreenButton(this, header), 0, wxRIGHT, FromDIP(10));
     auto* orders = Theme::MakeHeaderButton(header);
-    orders->SetLabel(wxT("  我的訂單  "));
+    orders->SetLabel(L(wxT("  我的訂單  "), wxT("  My Orders  ")));
     headerRight->Add(orders, 0, wxRIGHT, FromDIP(10));
     orders->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
         OrdersDialog dialog(this);
@@ -77,11 +78,11 @@ void ProductFrame::BuildLayout() {
             if (!m_syncingSide) m_preview->TurnTo(Showcase::PrintAngle(GetProduct(), index));
         });
     } else {
-        previewTop->Add(Theme::MakeLabel(previewCard, wxT("360° 預覽"), 10, true, Theme::kMuted), 0, wxALIGN_CENTER_VERTICAL);
+        previewTop->Add(Theme::MakeLabel(previewCard, L(wxT("360° 預覽"), wxT("360° view")), 10, true, Theme::kMuted), 0, wxALIGN_CENTER_VERTICAL);
     }
     previewTop->AddStretchSpacer();
     m_heart = new Widgets::HeartToggle(previewCard, Favorites::Get().Has(m_productIndex));
-    m_heart->SetToolTip(wxT("加入收藏"));
+    m_heart->SetToolTip(L(wxT("加入收藏"), wxT("Save")));
     m_heart->OnToggled([this](bool) { Favorites::Get().Toggle(m_productIndex); });
     previewTop->Add(m_heart, 0, wxALIGN_CENTER_VERTICAL);
     previewSizer->Add(previewTop, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(20));
@@ -111,7 +112,7 @@ void ProductFrame::BuildLayout() {
     wxBoxSizer* form = new wxBoxSizer(wxVERTICAL);
     m_formCard->SetSizer(form);
 
-    m_colorValue = AddSection(form, wxT("選擇配色"));
+    m_colorValue = AddSection(form, L(wxT("選擇配色"), wxT("Colour")));
     m_swatches = new SwatchPicker(m_formCard, (int)Catalog::Colorways().size());
     form->Add(m_swatches, 0, wxLEFT | wxRIGHT, FromDIP(21));  // swatch cells carry 7 DIP of padding
     m_swatches->OnSelectionChanged([this](int) { RefreshPreview(true); });
@@ -125,7 +126,7 @@ void ProductFrame::BuildLayout() {
         sizeRow->Add(m_sizes, 0, wxALIGN_CENTER_VERTICAL);
         if (product.sizeAdvice != SizeAdvice::None) {
             sizeRow->AddStretchSpacer();
-            auto* advice = Theme::MakeSecondaryButton(m_formCard, wxT("尺寸建議"), 10);
+            auto* advice = Theme::MakeSecondaryButton(m_formCard, L(wxT("尺寸建議"), wxT("Size advice")), 10);
             advice->SetMinSize(FromDIP(wxSize(-1, 36)));
             sizeRow->Add(advice, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(12));
             advice->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
@@ -151,7 +152,7 @@ void ProductFrame::BuildLayout() {
         form->Add(custom, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(kPad));
     }
 
-    AddSection(form, wxT("商品特色"));
+    AddSection(form, L(wxT("商品特色"), wxT("Details")));
     for (const wxString& line : product.features) {
         wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
         row->Add(Theme::MakeLabel(m_formCard, wxT("•"), 10, true, Theme::kOrange), 0, wxRIGHT, FromDIP(8));
@@ -165,7 +166,7 @@ void ProductFrame::BuildLayout() {
 
     // quantity stepper + subtotal
     wxBoxSizer* totals = new wxBoxSizer(wxHORIZONTAL);
-    totals->Add(Theme::MakeLabel(m_formCard, wxT("數量"), 12, true), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(14));
+    totals->Add(Theme::MakeLabel(m_formCard, L(wxT("數量"), wxT("Quantity")), 12, true), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(14));
     m_minus = Theme::MakeSecondaryButton(m_formCard, wxT("－"), 12);
     m_plus = Theme::MakeSecondaryButton(m_formCard, wxT("＋"), 12);
     m_minus->SetMinSize(FromDIP(wxSize(40, 38)));
@@ -178,21 +179,21 @@ void ProductFrame::BuildLayout() {
     totals->Add(m_quantityLabel, 0, wxALIGN_CENTER_VERTICAL);
     totals->Add(m_plus, 0, wxALIGN_CENTER_VERTICAL);
     totals->AddStretchSpacer();
-    totals->Add(Theme::MakeLabel(m_formCard, wxT("小計"), 11, false, Theme::kMuted), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(12));
+    totals->Add(Theme::MakeLabel(m_formCard, L(wxT("小計"), wxT("Subtotal")), 11, false, Theme::kMuted), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(12));
     m_subtotal = Theme::MakeLabel(m_formCard, wxEmptyString, 20, true, Theme::kOrange);
     totals->Add(m_subtotal, 0, wxALIGN_CENTER_VERTICAL);
     form->AddSpacer(FromDIP(18));
     form->Add(totals, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(kPad));
 
-    auto* add = Theme::MakePrimaryButton(m_formCard, wxT("加入購物車"), 13);
+    auto* add = Theme::MakePrimaryButton(m_formCard, L(wxT("加入購物車"), wxT("Add to cart")), 13);
     add->ShowArrow();
     form->AddSpacer(FromDIP(16));
     wxBoxSizer* actions = new wxBoxSizer(wxHORIZONTAL);
     actions->Add(add, 1, wxEXPAND);
     if (product.personalization == Personalization::NameAndNumber) {
-        auto* team = Theme::MakeSecondaryButton(m_formCard, wxT("團體訂購"), 11);
+        auto* team = Theme::MakeSecondaryButton(m_formCard, L(wxT("團體訂購"), wxT("Team order")), 11);
         team->SetMinSize(FromDIP(wxSize(120, 46)));
-        team->SetToolTip(wxT("一次輸入整隊的姓名、背號與尺寸"));
+        team->SetToolTip(L(wxT("一次輸入整隊的姓名、背號與尺寸"), wxT("Enter a whole team's names, numbers and sizes at once")));
         actions->Add(team, 0, wxEXPAND | wxLEFT, FromDIP(10));
         team->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { OnTeamOrder(); });
     }
@@ -205,11 +206,11 @@ void ProductFrame::BuildLayout() {
 
     // ---- footer ----
     wxBoxSizer* footer = new wxBoxSizer(wxHORIZONTAL);
-    auto* back = Theme::MakeSecondaryButton(root, wxT("←  所有商品"), 10);
+    auto* back = Theme::MakeSecondaryButton(root, L(wxT("←  所有商品"), wxT("←  All products")), 10);
     back->SetMinSize(FromDIP(wxSize(140, 38)));
     footer->Add(back, 0, wxALIGN_CENTER_VERTICAL);
     footer->AddStretchSpacer();
-    footer->Add(Theme::MakeLabel(root, wxString::Format(wxT("單筆滿 %s 免運・未滿運費 %s・F11 全螢幕"),
+    footer->Add(Theme::MakeLabel(root, wxString::Format(L(wxT("單筆滿 %s 免運・未滿運費 %s・F11 全螢幕"), wxT("Free shipping over %s, otherwise %s · F11 full screen")),
                                                         Theme::FormatPrice(Catalog::kFreeShippingThreshold),
                                                         Theme::FormatPrice(Catalog::kShippingFee)),
                                  10, false, Theme::kMuted),
@@ -241,7 +242,7 @@ wxString ProductFrame::DescribeSpec() const {
     wxString spec = product.sizes[size].label;
     if (product.id == wxT("sneaker")) spec = wxT("EU ") + spec;
     const wxString custom = m_personalizer->Describe();
-    if (!custom.IsEmpty()) spec += wxT("・") + custom;
+    if (!custom.IsEmpty()) spec += L(wxT("・"), wxT(" · ")) + custom;
     return spec;
 }
 
@@ -255,9 +256,9 @@ void ProductFrame::RefreshPreview(bool crossfade) {
         m_previewLook = look;
         m_preview->Rebuild(crossfade);
     }
-    m_previewTitle->SetLabel(product.name + wxT("・") + c.name);
-    m_previewSubtitle->SetLabel(c.englishName + wxT("  ·  ") + DescribeSpec());
-    m_colorValue->SetLabel(c.name + wxT("  ") + c.englishName);
+    m_previewTitle->SetLabel(product.name + L(wxT("・"), wxT(" · ")) + c.name);
+    m_previewSubtitle->SetLabel(Lang::English() ? DescribeSpec() : c.englishName + wxT("  ·  ") + DescribeSpec());
+    m_colorValue->SetLabel(Lang::English() ? c.name : c.name + wxT("  ") + c.englishName);
     m_sizeValue->SetLabel(product.sizes[size].label);
     m_sizeHint->SetLabel(product.sizes[size].hint);
     m_formCard->Layout();
@@ -299,8 +300,8 @@ void ProductFrame::OnAddToCart() {
     ShoppingCart::Get().Add(item);
     RefreshCartButton();
     m_cartButton->Flash(Theme::kOrange);
-    Widgets::ShowToast(this, wxT("已加入購物車"),
-                       wxString::Format(wxT("%s（%s）× %d・點此查看"), item.Title(), item.spec, item.quantity),
+    Widgets::ShowToast(this, L(wxT("已加入購物車"), wxT("Added to cart")),
+                       wxString::Format(L(wxT("%s（%s）× %d・點此查看"), wxT("%s (%s) × %d · click to view")), item.Title(), item.spec, item.quantity),
                        [this] { OpenCart(); });
 }
 
@@ -311,15 +312,16 @@ void ProductFrame::OnTeamOrder() {
 
     const auto players = dialog.Players();
     for (const auto& p : players) {
-        const wxString spec = GetProduct().sizes[p.sizeIndex].label + wxT("・") +
+        const wxString spec = GetProduct().sizes[p.sizeIndex].label + L(wxT("・"), wxT(" · ")) +
                               NameAndNumberPersonalizer::Spec(p.number, p.name, dialog.TeamName());
         ShoppingCart::Get().Add({ m_productIndex, m_swatches->GetSelection(), spec, GetProduct().price, 1 });
     }
     RefreshCartButton();
     m_cartButton->Flash(Theme::kOrange);
-    const wxString team = dialog.TeamName().IsEmpty() ? wxString(wxT("團體訂購")) : dialog.TeamName();
-    Widgets::ShowToast(this, wxString::Format(wxT("已加入 %zu 件球衣"), players.size()),
-                       CurrentColorway().name + wxT("・") + team + wxT("・點此查看購物車"), [this] { OpenCart(); });
+    const wxString team = dialog.TeamName().IsEmpty() ? wxString(L(wxT("團體訂購"), wxT("Team order"))) : dialog.TeamName();
+    Widgets::ShowToast(this, Lang::English() ? wxT("Added ") + Plural(players.size(), wxT("jersey"), wxT("jerseys"))
+                                       : wxString::Format(wxT("已加入 %zu 件球衣"), players.size()),
+                       CurrentColorway().name + L(wxT("・"), wxT(" · ")) + team + L(wxT("・點此查看購物車"), wxT(" · click to view the cart")), [this] { OpenCart(); });
 }
 
 void ProductFrame::OpenCart() {
