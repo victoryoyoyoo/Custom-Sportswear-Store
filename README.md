@@ -112,7 +112,7 @@ and wxWidgets 3.3. Visual Studio 2022 works too: right-click the project and ret
 To make a zip you can hand to someone (exe, artwork and the C++ runtime):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Version v2.2.0
+powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Version v2.3.0
 ```
 
 ## Artwork

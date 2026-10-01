@@ -6,9 +6,9 @@
 #     CustomSportswearStore\README.txt
 #
 # Usage (from the repo root, in PowerShell):
-#   powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Version v2.2.0
+#   powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Version v2.3.0
 
-param([string]$Version = "v2.2.0")
+param([string]$Version = "v2.3.0")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
