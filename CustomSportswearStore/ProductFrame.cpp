@@ -9,7 +9,7 @@
 #include <cmath>
 
 namespace {
-    constexpr int kPad = 28;  // content inset inside the cards
+    constexpr int kPad = 28;
 }
 
 ProductFrame::ProductFrame(wxWindow* parent, int productIndex)
@@ -46,7 +46,6 @@ void ProductFrame::BuildLayout() {
     root->SetBackgroundColour(Theme::kPage);
     wxBoxSizer* rootSizer = new wxBoxSizer(wxVERTICAL);
 
-    // ---- header ----
     wxBoxSizer* headerRight = nullptr;
     wxPanel* header = Theme::MakeHeader(root, product.name, Lang::English() ? product.tagline : product.englishName + wxT("  ·  ") + product.tagline,
                                         &headerRight);
@@ -65,11 +64,9 @@ void ProductFrame::BuildLayout() {
 
     wxBoxSizer* body = new wxBoxSizer(wxHORIZONTAL);
 
-    // ---- left: live preview ----
     Widgets::Card* previewCard = Theme::MakeCard(root);
     wxBoxSizer* previewSizer = new wxBoxSizer(wxVERTICAL);
 
-    // Top row: side switch (products with front and back artwork) on the left, favourite heart on the right.
     wxBoxSizer* previewTop = new wxBoxSizer(wxHORIZONTAL);
     if (product.shape == Shape::Flat && !product.reverseArtId.IsEmpty()) {
         m_sideChips = new Widgets::ChipPicker(previewCard, { product.sideNames[0], product.sideNames[1] }, 0);
@@ -107,14 +104,13 @@ void ProductFrame::BuildLayout() {
     previewCard->SetSizer(previewSizer);
     body->Add(previewCard, 4, wxEXPAND | wxRIGHT, FromDIP(8));
 
-    // ---- right: options ----
     m_formCard = Theme::MakeCard(root);
     wxBoxSizer* form = new wxBoxSizer(wxVERTICAL);
     m_formCard->SetSizer(form);
 
     m_colorValue = AddSection(form, L(wxT("選擇配色"), wxT("Colour")));
     m_swatches = new SwatchPicker(m_formCard, (int)Catalog::Colorways().size());
-    form->Add(m_swatches, 0, wxLEFT | wxRIGHT, FromDIP(21));  // swatch cells carry 7 DIP of padding
+    form->Add(m_swatches, 0, wxLEFT | wxRIGHT, FromDIP(21));
     m_swatches->OnSelectionChanged([this](int) { RefreshPreview(true); });
 
     m_sizeValue = AddSection(form, product.sizeTitle);
@@ -144,7 +140,6 @@ void ProductFrame::BuildLayout() {
     if (product.personalization != Personalization::None) {
         AddSection(form, product.textLabel);
         wxBoxSizer* custom = new wxBoxSizer(wxVERTICAL);
-        // Typing turns the product round to where the print goes.
         m_personalizer->BuildControls(m_formCard, custom, [this](int side) {
             RefreshPreview();
             m_preview->TurnTo(Showcase::PrintAngle(GetProduct(), side));
@@ -164,7 +159,6 @@ void ProductFrame::BuildLayout() {
     form->AddStretchSpacer();
     form->Add(new wxStaticLine(m_formCard), 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(kPad));
 
-    // quantity stepper + subtotal
     wxBoxSizer* totals = new wxBoxSizer(wxHORIZONTAL);
     totals->Add(Theme::MakeLabel(m_formCard, L(wxT("數量"), wxT("Quantity")), 12, true), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(14));
     m_minus = Theme::MakeSecondaryButton(m_formCard, wxT("－"), 12);
@@ -204,7 +198,6 @@ void ProductFrame::BuildLayout() {
     wxSizerItem* bodyItem = rootSizer->Add(body, 1, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(16));
     rootSizer->AddSpacer(FromDIP(8));
 
-    // ---- footer ----
     wxBoxSizer* footer = new wxBoxSizer(wxHORIZONTAL);
     auto* back = Theme::MakeSecondaryButton(root, L(wxT("←  所有商品"), wxT("←  All products")), 10);
     back->SetMinSize(FromDIP(wxSize(140, 38)));
@@ -233,7 +226,7 @@ void ProductFrame::BuildLayout() {
     SetQuantity(1);
     RefreshPreview();
     RefreshCartButton();
-    m_preview->Spin(450);  // one slow turn as the page opens, to show it can be turned
+    m_preview->Spin(450);
 }
 
 wxString ProductFrame::DescribeSpec() const {
@@ -250,7 +243,6 @@ void ProductFrame::RefreshPreview(bool crossfade) {
     const Product& product = GetProduct();
     const Colorway& c = CurrentColorway();
     const int size = m_sizes ? m_sizes->GetSelection() : product.defaultSize;
-    // Size doesn't change the picture; colourway and print do.
     const wxString look = c.id + wxT("|") + m_personalizer->Describe();
     if (look != m_previewLook) {
         m_previewLook = look;
@@ -274,7 +266,6 @@ void ProductFrame::SetQuantity(int quantity) {
 }
 
 void ProductFrame::RefreshTotals() {
-    // The subtotal rolls to the new amount instead of jumping.
     const int target = GetProduct().price * m_quantity;
     if (m_shownSubtotal < 0) {
         m_shownSubtotal = target;
@@ -332,9 +323,6 @@ void ProductFrame::OpenCart() {
 
 void ProductFrame::OnClose(wxCloseEvent& event) {
     if (!Theme::CanClosePage(event)) return;
-    // Whether it's the back button or the window's X, hand control back to the
-    // product list (otherwise the hidden list keeps the app alive with no
-    // window). This page stays up until the list has faded in.
     if (m_closing) return;
     m_closing = true;
     wxFrame* launcher = wxDynamicCast(GetParent(), wxFrame);

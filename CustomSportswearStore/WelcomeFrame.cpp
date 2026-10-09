@@ -22,7 +22,6 @@ namespace {
         return Catalog::Colorways().front();
     }
 
-    // Outlined label pill ("即時預覽").
     wxWindow* MakePill(wxWindow* parent, const wxString& text) {
         auto* pill = new wxWindow(parent, wxID_ANY);
         pill->SetBackgroundStyle(wxBG_STYLE_PAINT);
@@ -49,9 +48,6 @@ namespace {
         return pill;
     }
 
-    // The right half of the welcome screen: a jersey and a ball turning
-    // slowly under a soft spotlight, drawn live by the same 3D code as the
-    // product pages.
     class Stage : public wxWindow {
     public:
         explicit Stage(wxWindow* parent) : wxWindow(parent, wxID_ANY) {
@@ -59,12 +55,8 @@ namespace {
             SetMinSize(FromDIP(wxSize(440, 360)));
             Bind(wxEVT_PAINT, &Stage::OnPaint, this);
             Bind(wxEVT_SIZE, [this](wxSizeEvent& event) { m_stale = true; Refresh(false); event.Skip(); });
-            // Each frame asks for the next only once it has been drawn, so a
-            // slow machine gets a lower frame rate instead of a busy loop that
-            // never leaves the window idle (wx needs idle time to close it).
             m_timer.Bind(wxEVT_TIMER, [this](wxTimerEvent&) { Refresh(false); });
             m_startMs = wxGetLocalTimeMillis();
-            // The jersey wears the default number: its print controls live on a hidden panel.
             if (const Product* p = FindProduct(wxT("jersey"))) {
                 m_print = Personalizer::For(*p);
                 auto* hidden = new wxPanel(this);
@@ -100,7 +92,6 @@ namespace {
             if (m_stale) Build();
             const wxLongLong started = wxGetLocalTimeMillis();
 
-            // Spotlight: a soft pool of light behind and under the products.
             {
                 wxGraphicsGradientStops glow(wxColour(58, 74, 108, 150), wxColour(14, 23, 42, 0));
                 gc->SetBrush(gc->CreateRadialGradientBrush(size.x * 0.52, size.y * 0.45, size.x * 0.52, size.y * 0.45,
@@ -116,13 +107,9 @@ namespace {
                 gc->PopState();
             }
 
-            // The jersey sways to show it is 3D without ever going edge-on;
-            // the ball keeps rolling round.
             const double seconds = (wxGetLocalTimeMillis() - m_startMs).ToDouble() / 1000.0;
             const double sway = 0.55 * std::sin(seconds * 2 * 3.14159265358979 / 9.0);
             gc->SetInterpolationQuality(wxINTERPOLATION_GOOD);
-            // Too slow for full resolution (a debug build, an old laptop):
-            // draw smaller and let the graphics card scale it up.
             const double q = m_quality;
             const wxSize jerseyPixels((int)(m_jerseySize.x * q), (int)(m_jerseySize.y * q));
             const wxSize ballPixels((int)(m_ballSize.x * q), (int)(m_ballSize.y * q));
@@ -154,7 +141,7 @@ namespace {
         std::unique_ptr<Showcase::Model> m_jersey, m_ball;
         wxSize m_jerseySize, m_ballSize;
         bool m_stale = true;
-        double m_quality = 1.0;  // fraction of full resolution the frames are drawn at
+        double m_quality = 1.0;
         wxTimer m_timer;
         wxLongLong m_startMs;
     };
@@ -169,7 +156,6 @@ WelcomeFrame::WelcomeFrame()
     panel->SetBackgroundColour(Theme::kNavy);
     wxBoxSizer* root = new wxBoxSizer(wxVERTICAL);
 
-    // Language switch, top right. It names the other language, in that language.
     auto* language = new Widgets::FlatButton(panel, Lang::English() ? wxString(wxT("中文")) : wxString(wxT("English")),
                                              Widgets::FlatButton::Style::OnDark, 10, 34);
     language->SetMinSize(FromDIP(wxSize(96, 34)));
@@ -177,7 +163,6 @@ WelcomeFrame::WelcomeFrame()
 
     wxBoxSizer* body = new wxBoxSizer(wxHORIZONTAL);
 
-    // ---- left: name, what the store does, the way in ----
     wxBoxSizer* text = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer* titleRow = new wxBoxSizer(wxHORIZONTAL);
     wxPanel* bar = new wxPanel(panel, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(5, 64)));
@@ -228,12 +213,10 @@ WelcomeFrame::WelcomeFrame()
     language->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { SwitchLanguage(); });
     enter->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { EnterStore(); });
     stage->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent&) { EnterStore(); });
-    enter->SetFocus();  // Enter / Space works right away
+    enter->SetFocus();
 }
 
 void WelcomeFrame::SwitchLanguage() {
-    // Every window builds its text when it is created, so the welcome screen
-    // is simply built again in the other language. Nothing else is open yet.
     if (m_entering) return;
     m_entering = true;
     Lang::SetEnglish(!Lang::English());

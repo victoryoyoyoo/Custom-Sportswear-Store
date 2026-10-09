@@ -12,15 +12,12 @@ namespace Theme {
 
 wxFont Font(int pointSize, bool bold) {
     wxFontInfo info(pointSize);
-    // Segoe UI for English; Chinese text still falls back to a Chinese face.
     info.FaceName(Lang::English() ? wxT("Segoe UI") : wxT("Microsoft JhengHei UI"));
     if (bold) info.Bold();
     return wxFont(info);
 }
 
 wxString AssetPath(const wxString& fileName) {
-    // Candidate roots: current directory, then the exe folder and up to three
-    // parents (x64\Debug\ -> project -> solution).
     wxArrayString roots;
     roots.Add(wxGetCwd());
     wxFileName exeDir(wxStandardPaths::Get().GetExecutablePath());
@@ -61,7 +58,6 @@ void ImagePanel::StartCrossfade(const wxImage& from, const wxImage& to, int dura
     m_fadeFrom = from;
     m_fadeTo = to;
     m_fade.Start(durationMs, [this](double t) {
-        // Blend the two frames pixel by pixel.
         wxImage frame(m_fadeTo.GetWidth(), m_fadeTo.GetHeight(), false);
         const unsigned char* a = m_fadeFrom.GetData();
         const unsigned char* b = m_fadeTo.GetData();
@@ -84,8 +80,6 @@ void ImagePanel::PlayIntro(int delayMs) {
 }
 
 void ImagePanel::Rerender() {
-    // A resize can ask many times in a row; render once, after the current
-    // events have been handled.
     if (m_pending) return;
     m_pending = true;
     CallAfter([this] {
@@ -95,7 +89,6 @@ void ImagePanel::Rerender() {
         wxBitmap next = m_renderer(area);
 
         if (m_introDelay >= 0) {
-            // Show the plain background now, fade the picture in after the delay.
             const int delay = m_introDelay;
             m_introDelay = -1;
             m_fade.Stop();
@@ -120,7 +113,7 @@ void LimitWidth(wxWindow* host, wxSizerItem* item, int maxDip, int minMarginDip)
         const int width = host->GetClientSize().x;
         const int margin = std::max(host->FromDIP(minMarginDip), (width - host->FromDIP(maxDip)) / 2);
         if (item->GetBorder() != margin) item->SetBorder(margin);
-        event.Skip();  // the default handler then lays the sizer out
+        event.Skip();
     });
 }
 
@@ -171,8 +164,6 @@ Widgets::FlatButton* MakeFullScreenButton(wxFrame* frame, wxWindow* parent) {
     Widgets::FlatButton* button = MakeHeaderButton(parent);
     button->SetToolTip(L(wxT("快捷鍵 F11；全螢幕時按 Esc 離開"), wxT("Shortcut F11; Esc leaves full screen")));
     button->Bind(wxEVT_BUTTON, [frame](wxCommandEvent&) { frame->ShowFullScreen(!frame->IsFullScreen()); });
-    // The state can change from the keyboard or from ShowLike(), so the label
-    // follows the window size instead of the click.
     auto sync = [frame, button] {
         button->SetLabel(frame->IsFullScreen() ? L(wxT("  結束全螢幕  "), wxT("  Exit full screen  ")) : L(wxT("  全螢幕  "), wxT("  Full screen  ")));
         button->GetParent()->Layout();
@@ -190,8 +181,6 @@ void ShowLike(wxFrame* next, const wxFrame* current, std::function<void()> onSho
     const bool maximized = current->IsMaximized();
     Widgets::FadeIn(next, [next, fullScreen, maximized] {
         if (fullScreen) {
-            // ShowFullScreen(true) does nothing on a frame that is already
-            // full screen but hidden, so show it explicitly in that case.
             if (next->IsFullScreen()) next->Show();
             else next->ShowFullScreen(true);
         } else {
@@ -235,7 +224,6 @@ wxStaticText* MakeLabel(wxWindow* parent, const wxString& text, int pointSize,
 }
 
 wxWindow* MakeEyebrow(wxWindow* parent, const wxString& text) {
-    // Spaced-out capitals in a pale pill, drawn by hand for the letter spacing.
     wxString spaced;
     for (size_t i = 0; i < text.length(); ++i) spaced << text[i] << (i + 1 < text.length() ? wxT("\u2009") : wxT(""));
     wxPanel* pill = new wxPanel(parent, wxID_ANY);
@@ -268,8 +256,6 @@ Widgets::Card* MakeCard(wxWindow* parent, bool hoverable) {
 }
 
 void FitFrameToContent(wxTopLevelWindow* window, wxWindow* content, const wxSize& preferredDip) {
-    // Never smaller than what the sizers need (so nothing gets squashed at
-    // 125%/150% scaling or with larger fonts), otherwise the preferred size.
     wxSize needed = content->GetBestSize();
     wxSize preferred = window->FromDIP(preferredDip);
     window->SetMinClientSize(needed);
@@ -283,7 +269,6 @@ wxPanel* MakeHeader(wxWindow* parent, const wxString& title, const wxString& sub
 
     wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
 
-    // Orange accent bar, same motif as the welcome banner.
     wxPanel* accent = new wxPanel(header, wxID_ANY, wxDefaultPosition, header->FromDIP(wxSize(5, 40)));
     accent->SetBackgroundColour(kOrange);
     row->Add(accent, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, header->FromDIP(24));
@@ -303,4 +288,4 @@ wxPanel* MakeHeader(wxWindow* parent, const wxString& title, const wxString& sub
     return header;
 }
 
-}  // namespace Theme
+}

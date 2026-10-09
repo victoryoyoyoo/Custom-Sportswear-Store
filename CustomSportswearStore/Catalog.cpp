@@ -35,10 +35,6 @@ namespace {
 namespace Catalog {
 
 namespace {
-    // The tables' text follows the interface language, so a table is built
-    // again when the language changes. Rows are overwritten in place, so
-    // anything holding a reference to a row (a product page's Personalizer,
-    // the cart's coupon) stays valid.
     template <typename Row, typename Build>
     const std::vector<Row>& Localized(std::vector<Row>& table, int& builtFor, Build build) {
         const int language = Lang::English() ? 1 : 0;
@@ -413,11 +409,8 @@ const Coupon* FindCoupon(const wxString& code) {
     return nullptr;
 }
 
-}  // namespace Catalog
+}
 
-// ---------------------------------------------------------------------------
-// Favorites
-// ---------------------------------------------------------------------------
 Favorites& Favorites::Get() {
     static Favorites instance;
     return instance;
@@ -427,17 +420,11 @@ void Favorites::Toggle(int productIndex) {
     if (!m_items.erase(productIndex)) m_items.insert(productIndex);
 }
 
-// ---------------------------------------------------------------------------
-// OrderHistory
-// ---------------------------------------------------------------------------
 OrderHistory& OrderHistory::Get() {
     static OrderHistory instance;
     return instance;
 }
 
-// ---------------------------------------------------------------------------
-// ShoppingCart
-// ---------------------------------------------------------------------------
 ShoppingCart& ShoppingCart::Get() {
     static ShoppingCart instance;
     return instance;

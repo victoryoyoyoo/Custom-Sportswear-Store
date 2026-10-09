@@ -4,9 +4,6 @@
 #include "Catalog.h"
 #include "Widgets.h"
 
-// A custom-drawn row of colour dots, one per colourway. wxWidgets has no
-// built-in "colour swatch picker", so this control paints the dots itself
-// (wxEVT_PAINT) and turns mouse clicks into a selection callback.
 class SwatchPicker : public wxPanel {
 public:
     SwatchPicker(wxWindow* parent, int columns);
@@ -26,8 +23,8 @@ private:
     int m_columns;
     int m_selected = 0;
     int m_hovered = -1;
-    int m_previous = -1;      // selection the ring is moving away from
-    double m_ring = 1.0;      // 0..1 progress of the selection-ring animation
+    int m_previous = -1;
+    double m_ring = 1.0;
     Widgets::Tween m_ringTween;
     std::function<void(int)> m_onChange;
 };

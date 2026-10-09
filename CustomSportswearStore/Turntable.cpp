@@ -8,8 +8,8 @@
 
 namespace {
     constexpr double kPi = 3.14159265358979323846;
-    constexpr double kFriction = 3.2;      // per second: how quickly a flick slows down
-    constexpr double kKeyStep = kPi / 8;   // arrow keys turn 22.5°
+    constexpr double kFriction = 3.2;
+    constexpr double kKeyStep = kPi / 8;
 }
 
 Turntable::Turntable(wxWindow* parent, const wxSize& minDipSize, Builder builder)
@@ -40,19 +40,16 @@ Turntable::Turntable(wxWindow* parent, const wxSize& minDipSize, Builder builder
     Bind(wxEVT_MOTION, [this](wxMouseEvent& event) {
         if (!m_dragging) return;
         if (!event.LeftIsDown()) {
-            // The button went up somewhere we didn't hear about: stop
-            // following the pointer rather than turning on a mere hover.
             m_dragging = false;
             if (HasCapture()) ReleaseMouse();
             Settle();
             return;
         }
-        // Dragging across 60% of the panel turns the product half way round.
         const double perPixel = kPi / std::max(1, (int)(GetClientSize().x * 0.6));
         const double delta = (event.GetX() - m_lastX) * perPixel;
         const wxLongLong now = wxGetLocalTimeMillis();
         const double dt = std::max(1.0, (now - m_lastMoveMs).ToDouble()) / 1000.0;
-        m_velocity = 0.6 * m_velocity + 0.4 * (delta / dt);  // smoothed, for the flick
+        m_velocity = 0.6 * m_velocity + 0.4 * (delta / dt);
         m_lastX = event.GetX();
         m_lastMoveMs = now;
         SetAngle(m_angle + delta, true);
@@ -63,7 +60,6 @@ Turntable::Turntable(wxWindow* parent, const wxSize& minDipSize, Builder builder
         if (!m_dragging) return;
         m_dragging = false;
         if (HasCapture()) ReleaseMouse();
-        // A pause before letting go means "stop here", not a flick.
         if ((wxGetLocalTimeMillis() - m_lastMoveMs).ToDouble() > 80) m_velocity = 0;
         StartInertia();
     };
@@ -109,7 +105,6 @@ void Turntable::StartInertia() {
 }
 
 void Turntable::Rebuild(bool crossfade) {
-    // A burst of keystrokes asks many times in a row: rebuild once, after them.
     m_rebuildFade = m_rebuildFade || crossfade;
     if (m_rebuildPending) return;
     m_rebuildPending = true;
@@ -130,7 +125,6 @@ void Turntable::Rebuild(bool crossfade) {
 
 void Turntable::TurnTo(double angle) {
     m_coast.Stop();
-    // Go the short way round from wherever it is now.
     const double target = m_angle + std::remainder(angle - m_angle, 2 * kPi);
     const double from = m_angle;
     if (std::abs(target - from) < 1e-6) { Settle(); return; }
@@ -155,7 +149,6 @@ void Turntable::SetAngle(double angle, bool moving) {
 }
 
 void Turntable::Settle() {
-    // Keep the angle small so it never loses precision after many turns.
     m_angle = std::remainder(m_angle, 2 * kPi);
     m_moving = false;
     m_frameStale = true;
@@ -183,7 +176,6 @@ void Turntable::OnPaint(wxPaintEvent&) {
 
     EnsureModel();
     if (m_model && m_frameStale) {
-        // Half resolution while it moves keeps dragging smooth.
         const wxSize renderSize = m_moving ? wxSize(size.x / 2, size.y / 2) : size;
         m_frame = m_model->Render(m_angle, renderSize, !m_moving);
         if (renderSize != size) {
@@ -204,7 +196,6 @@ void Turntable::OnPaint(wxPaintEvent&) {
         gc->EndLayer();
     }
 
-    // "Drag to turn" pill at the bottom until the customer has tried it.
     if (m_hint > 0.01) {
         const wxString label = L(wxT("⟲  拖曳旋轉 360°"), wxT("⟲  Drag to turn 360°"));
         gc->SetFont(Theme::Font(9, true), wxColour(90, 100, 118, (unsigned char)(255 * m_hint)));

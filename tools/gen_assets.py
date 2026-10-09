@@ -1,15 +1,3 @@
-"""Draws every image in assets/ from scratch.
-
-    python tools/gen_assets.py            # writes into ../assets
-    python tools/gen_assets.py out_dir    # or somewhere else
-    python tools/gen_assets.py out_dir tee hoodie   # just some products
-
-Everything is vector-style drawing with Pillow: the store's own colourways and
-basketball mark, no photos, no third-party logos. Shapes are drawn at 4x and
-scaled down for smooth edges; product art is saved at 2x its design size as a
-transparent cut-out, because the app lights it, shadows it and turns it round
-itself. The balls and the cap have no artwork here: the app draws them in 3D.
-"""
 import math
 import os
 import random
@@ -18,13 +6,12 @@ import sys
 from PIL import Image, ImageDraw, ImageFilter
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "assets")
-SS = 4         # drawing is done at SS x the design size, then scaled down
-ART_SCALE = 2  # product art is saved at this multiple of its design size, so it stays sharp full screen
+SS = 4
+ART_SCALE = 2
 
 NAVY = (14, 23, 42)
 ORANGE = (242, 106, 33)
 
-# id, 中文名, English name, fabric, trim   (same table as Catalog.cpp)
 COLORWAYS = [
     ("navy",    "午夜藍", "Midnight Navy",    "#1B2A4A", "#C9D3E3"),
     ("crimson", "烈焰紅", "Crimson Flame",    "#B3202A", "#F2B632"),
@@ -41,14 +28,12 @@ COLORWAYS = [
 ]
 
 
-# ============================================================== helpers
 def rgb(h):
     h = h.lstrip("#")
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
 
 def shade(c, f):
-    """f < 1 darkens, f > 1 lightens (towards white)."""
     if f < 1:
         return tuple(int(v * f) for v in c)
     return tuple(int(v + (255 - v) * (f - 1)) for v in c)
@@ -59,14 +44,12 @@ def luminance(c):
 
 
 def bez(p0, p1, p2, n=28):
-    """Quadratic Bezier as a point list."""
     return [((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
              (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1])
             for t in (i / n for i in range(n + 1))]
 
 
 def path(*segments):
-    """Join point lists / single points into one outline."""
     out = []
     for seg in segments:
         pts = [seg] if isinstance(seg[0], (int, float)) else list(seg)
@@ -77,7 +60,6 @@ def path(*segments):
 
 
 class Canvas:
-    """Supersampled RGBA canvas working in design units (w x h)."""
 
     def __init__(self, w, h):
         self.w, self.h = w, h
@@ -121,13 +103,11 @@ class Canvas:
         self.img.alpha_composite(lay.filter(ImageFilter.GaussianBlur(blur * SS)))
 
     def light(self, mask, box, alpha=34, blur=40, colour=(255, 255, 255)):
-        """Soft highlight (or shadow, with a dark colour) clipped to mask."""
         lay = self.layer()
         ImageDraw.Draw(lay).ellipse(self.B(box), fill=colour + (alpha,))
         self.composite_clipped(lay.filter(ImageFilter.GaussianBlur(blur * SS)), mask)
 
     def mesh(self, mask, base, step=7, alpha=26):
-        """Athletic mesh: a staggered grid of tiny holes."""
         lay = self.layer()
         d = ImageDraw.Draw(lay)
         dark = shade(base, 0.55) if luminance(base) > 60 else shade(base, 1.35)
@@ -140,7 +120,6 @@ class Canvas:
         self.composite_clipped(lay, mask)
 
     def stitch(self, pts, colour, dash=6, gap=4, width=1.4):
-        """Dashed stitching line along a polyline."""
         d = self.draw
         pts = self.P(pts)
         on, left = True, dash * SS
@@ -176,7 +155,6 @@ class Canvas:
 
 
 def emblem(fabric, trim, size):
-    """The store's mark: a basketball inside a ring, in the colourway's trim."""
     S = size * SS
     img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
@@ -201,13 +179,7 @@ def on_white(img):
     return bg.convert("RGB")
 
 
-# ============================================================== products
-# Each function returns an RGBA image. The C++ side prints names / numbers /
-# embroidery onto some of them; those positions live in Catalog.cpp and use the
-# same design units as the canvas sizes here.
-
 def jersey(fabric, trim, front=False):
-    """Basketball tank top (520 x 600): back view, or the front with a deeper neckline."""
     c = Canvas(520, 600)
     p, s = rgb(fabric), rgb(trim)
     dip = 118 if front else 72
@@ -220,31 +192,27 @@ def jersey(fabric, trim, front=False):
     c.poly(body, p)
     m = c.mask(body)
     c.mesh(m, p)
-    # side panels in the trim colour, with a darker inner edge for depth
     for side in (-1, 1):
         x = 260 + side * 176
         c.poly([(x - 16 * side, 215), (x + 16 * side, 205), (x + 18 * side, 560), (x - 18 * side, 566)], s)
         c.poly([(x - 22 * side, 222), (x - 16 * side, 215), (x - 18 * side, 566), (x - 25 * side, 568)], shade(p, 0.72))
-    # binding on neck and armholes
     for curve in (neck, arm_r, arm_l, [(150, 30), (205, 30)], [(315, 30), (370, 30)]):
         c.line(curve, s, 14)
     c.line(bez((70, 548), (260, 573), (450, 548)), shade(p, 0.78), 10)
     thread = shade(p, 1.45) if luminance(p) < 90 else shade(p, 0.6)
     c.stitch(bez((212, 44), (260, dip + 12), (308, 44)), thread)
     c.stitch(bez((74, 540), (260, 564), (446, 540)), thread)
-    # light from the upper left, fabric folds, darker hem
     c.light(m, (140, 50, 340, 640), alpha=30, blur=40)
     c.light(m, (60, 380, 470, 700), alpha=40, blur=50, colour=(0, 0, 0))
     c.line(bez((180, 250), (200, 400), (170, 540)), shade(p, 0.9), 6)
     if front:
-        c.paste(emblem(p, s, 30 * SS), (104, 496))   # small tag above the hem
+        c.paste(emblem(p, s, 30 * SS), (104, 496))
     else:
-        c.paste(emblem(p, s, 30 * SS), (245, 62))    # neck tag
+        c.paste(emblem(p, s, 30 * SS), (245, 62))
     return c.done()
 
 
 def shorts(fabric, trim):
-    """Basketball shorts, front view (600 x 600)."""
     c = Canvas(600, 600)
     p, s = rgb(fabric), rgb(trim)
     body = path((130, 110), (470, 110), bez((470, 110), (492, 300), (512, 480)), (512, 480),
@@ -253,14 +221,12 @@ def shorts(fabric, trim):
     c.poly(body, p)
     m = c.mask(body)
     c.mesh(m, p)
-    # side stripes
     for side in (-1, 1):
         if side < 0:
             stripe = [(130, 140), (156, 140), (130, 486), (100, 482)]
         else:
             stripe = [(444, 140), (470, 140), (500, 482), (470, 486)]
         c.poly(stripe, s)
-    # waistband with drawcord
     band = [(126, 96), (474, 96), (476, 140), (124, 140)]
     c.poly(band, shade(p, 0.8))
     for y in range(102, 138, 6):
@@ -269,7 +235,6 @@ def shorts(fabric, trim):
     c.line([(300, 140), (310, 196)], s, 5)
     c.ellipse((286, 196, 298, 208), s)
     c.ellipse((304, 192, 316, 204), s)
-    # leg hems and centre seam
     c.line(bez((92, 466), (190, 490), (282, 476)), shade(p, 0.75), 9)
     c.line(bez((318, 476), (410, 490), (508, 466)), shade(p, 0.75), 9)
     thread = shade(p, 1.45) if luminance(p) < 90 else shade(p, 0.6)
@@ -283,7 +248,6 @@ def shorts(fabric, trim):
 
 
 def cap(fabric, trim):
-    """Six-panel baseball cap, three-quarter side view, bill to the right (520 x 420)."""
     c = Canvas(520, 420)
     p, s = rgb(fabric), rgb(trim)
     crown = path(bez((40, 266), (20, 58), (215, 50)), bez((215, 50), (385, 58), (392, 252)),
@@ -291,7 +255,6 @@ def cap(fabric, trim):
     c.poly(crown, p)
     m = c.mask(crown)
     c.mesh(m, p, step=6, alpha=16)
-    # back closure opening
     c.poly(path(bez((52, 266), (60, 224), (104, 216)), bez((104, 216), (126, 250), (116, 276))), shade(p, 0.6))
     seam = shade(p, 0.72)
     for ctrl, end in (((140, 88), (112, 276)), ((305, 72), (338, 262)), ((238, 120), (232, 286))):
@@ -302,7 +265,6 @@ def cap(fabric, trim):
     c.light(m, (120, 58, 310, 190), alpha=44, blur=28)
     c.light(m, (200, 170, 420, 330), alpha=30, blur=30, colour=(0, 0, 0))
     c.line(bez((44, 264), (215, 290), (392, 250)), s, 7)
-    # bill
     top = bez((300, 262), (425, 222), (508, 262))
     under = bez((508, 262), (470, 302), (322, 292))
     c.poly(path(top, under), shade(p, 0.9))
@@ -318,7 +280,6 @@ def cap(fabric, trim):
 
 
 def sneaker(fabric, trim):
-    """High-top basketball shoe, side view, toe to the right (640 x 480)."""
     c = Canvas(640, 480)
     p, s = rgb(fabric), rgb(trim)
     white, sole_dark = (246, 246, 244), (52, 52, 58)
@@ -329,19 +290,15 @@ def sneaker(fabric, trim):
     c.poly(upper, p)
     m = c.mask(upper)
     c.mesh(m, p, step=6, alpha=14)
-    # toe cap and heel counter, a shade darker
     c.poly(path(bez((470, 280), (560, 300), (586, 352)), (590, 382), (470, 382), bez((470, 382), (440, 330), (470, 280))),
            shade(p, 0.82))
     c.poly(path((80, 382), bez((80, 382), (72, 280), (92, 200)), bez((92, 200), (150, 250), (170, 382))), shade(p, 0.82))
-    # sweeping side band (our own shape) in the trim colour
     band = path(bez((126, 334), (300, 262), (520, 318)), bez((520, 318), (528, 332), (506, 336)),
                 bez((506, 336), (300, 290), (132, 352)))
     c.poly(band, s)
     c.line(bez((140, 368), (320, 316), (500, 356)), shade(s, 0.85) if luminance(s) > 60 else shade(s, 1.5), 3)
-    # collar padding and heel pull tab
     c.line(bez((98, 124), (150, 102), (204, 122)), shade(p, 0.62), 14)
     c.poly([(84, 118), (104, 110), (100, 190), (80, 198)], s)
-    # lace area: tongue, eyelets, laces
     c.poly(path(bez((206, 118), (225, 88), (262, 96)), bez((262, 96), (280, 150), (300, 176)),
                 bez((300, 176), (250, 170), (206, 118))), shade(p, 0.9))
     lace_line = bez((222, 150), (320, 200), (420, 262), n=6)
@@ -350,7 +307,6 @@ def sneaker(fabric, trim):
         c.ellipse((x - 5, y - 5, x + 5, y + 5), shade(p, 0.45))
         nx, ny = lace_line[i + 1]
         c.line([(x - 10, y + 8), (nx + 10, ny - 8)], lace, 5)
-    # midsole with a trim accent line, outsole
     mid = path((70, 372), (604, 372), bez((604, 372), (618, 392), (598, 412)), (86, 412),
                bez((86, 412), (60, 400), (70, 372)))
     c.poly(mid, white)
@@ -369,7 +325,6 @@ def sneaker(fabric, trim):
 
 
 def socks(fabric, trim):
-    """Pair of crew socks, side view (560 x 560)."""
     c = Canvas(560, 560)
     p, s = rgb(fabric), rgb(trim)
 
@@ -381,13 +336,11 @@ def socks(fabric, trim):
         c.shadow(body, dx=6, dy=8, blur=10, alpha=45)
         c.poly(body, tone)
         m = c.mask(body)
-        # ribbed cuff with two trim stripes
         c.poly([(ox + 70, oy + 40), (ox + 190, oy + 40), (ox + 190, oy + 120), (ox + 70, oy + 120)], shade(tone, 0.92))
         for y in (oy + 70, oy + 96):
             c.poly([(ox + 70, y), (ox + 190, y), (ox + 190, y + 12), (ox + 70, y + 12)], s)
         for x in range(ox + 78, ox + 190, 9):
             c.line([(x, oy + 42), (x, oy + 118)], shade(tone, 0.8), 1.3)
-        # heel and toe patches
         c.poly(path(bez((ox + 70, oy + 330), (ox + 66, oy + 400), (ox + 150, oy + 420)), (ox + 150, oy + 380),
                     bez((ox + 150, oy + 380), (ox + 100, oy + 370), (ox + 104, oy + 320))), s)
         c.poly(path(bez((ox + 300, oy + 346), (ox + 380, oy + 380), (ox + 350, oy + 420)), (ox + 290, oy + 420),
@@ -403,24 +356,20 @@ def socks(fabric, trim):
 
 
 def backpack(fabric, trim):
-    """Backpack, front view (520 x 600)."""
     c = Canvas(520, 600)
     p, s = rgb(fabric), rgb(trim)
-    # top handle
     c.line(bez((220, 90), (260, 40), (300, 90)), shade(p, 0.6), 12)
     body = path(bez((140, 150), (140, 70), (260, 70)), bez((260, 70), (380, 70), (380, 150)),
                 (388, 530), bez((388, 530), (260, 552), (132, 530)))
     c.poly(body, p)
     m = c.mask(body)
     c.mesh(m, p, step=5, alpha=12)
-    # front pocket in the trim colour
     pocket = path((170, 330), (350, 330), bez((350, 330), (366, 330), (366, 346)), (366, 496),
                   bez((366, 496), (260, 512), (154, 496)), (154, 346), bez((154, 346), (154, 330), (170, 330)))
     c.shadow(pocket, dx=0, dy=4, blur=5, alpha=50)
     c.poly(pocket, s)
     pm = c.mask(pocket)
     c.light(pm, (150, 300, 300, 480), alpha=30, blur=25)
-    # zips with pulls
     zip_c = shade(p, 0.45)
     c.line(bez((150, 160), (260, 110), (370, 160)), zip_c, 5)
     c.line([(170, 350), (350, 350)], shade(s, 0.6) if luminance(s) > 60 else shade(s, 1.8), 4)
@@ -437,7 +386,6 @@ def backpack(fabric, trim):
 
 
 def tee(fabric, trim, front=True):
-    """Short-sleeve training tee (520 x 600): front with a crew neck, or the back."""
     c = Canvas(520, 600)
     p, s = rgb(fabric), rgb(trim)
     dip = 96 if front else 62
@@ -448,24 +396,20 @@ def tee(fabric, trim, front=True):
                 (100, 226), (34, 186), (112, 70), bez((112, 70), (148, 52), (196, 44)))
     c.poly(body, p)
     m = c.mask(body)
-    # cotton jersey knit: very fine horizontal courses instead of the mesh
     lay = c.layer()
     d = ImageDraw.Draw(lay)
     dark = shade(p, 0.6) if luminance(p) > 60 else shade(p, 1.4)
     for y in range(40, 590, 3):
         d.line([(0, y * SS), (c.w * SS, y * SS)], fill=dark + (10,), width=1)
     c.composite_clipped(lay, m)
-    # sleeve cuffs in the trim colour
     c.line([(40, 180), (104, 218)], s, 12)
     c.line([(480, 180), (416, 218)], s, 12)
-    # rib collar
     c.line(neck, s, 16)
     c.line(bez((200, 52), (260, dip + 8), (320, 52)), shade(s, 0.8) if luminance(s) > 70 else shade(s, 1.4), 2)
     thread = shade(p, 1.45) if luminance(p) < 90 else shade(p, 0.6)
     c.stitch(bez((104, 560), (260, 576), (416, 560)), thread)
     c.stitch([(114, 212), (110, 70)], shade(p, 0.85), dash=4, gap=3, width=1)
     c.stitch([(406, 212), (410, 70)], shade(p, 0.85), dash=4, gap=3, width=1)
-    # soft drape and light from the upper left
     c.line(bez((160, 300), (176, 430), (150, 560)), shade(p, 0.92), 8)
     c.line(bez((372, 330), (360, 450), (380, 560)), shade(p, 0.93), 6)
     c.light(m, (130, 60, 330, 620), alpha=30, blur=45)
@@ -478,7 +422,6 @@ def tee(fabric, trim, front=True):
 
 
 def hoodie(fabric, trim, front=True):
-    """Pullover hoodie (560 x 640): front with pocket and drawcords, or the back with the hood."""
     c = Canvas(560, 640)
     p, s = rgb(fabric), rgb(trim)
     rib = shade(p, 0.82)
@@ -488,7 +431,6 @@ def hoodie(fabric, trim, front=True):
                 bez((32, 540), (40, 300), (98, 120)), bez((98, 120), (130, 80), (196, 70)))
     c.poly(body, p)
     m = c.mask(body)
-    # brushed fleece: soft speckle
     rnd = random.Random(11)
     lay = c.layer()
     d = ImageDraw.Draw(lay)
@@ -497,18 +439,15 @@ def hoodie(fabric, trim, front=True):
         x, y = rnd.uniform(30, 530) * SS, rnd.uniform(60, 600) * SS
         d.point((x, y), fill=dark + (40,))
     c.composite_clipped(lay, m)
-    # ribbed cuffs and waistband
     for box in ([(32, 540), (82, 548), (82, 590), (30, 584)], [(478, 548), (528, 540), (530, 584), (478, 590)],
                 [(120, 556), (440, 556), (440, 600), (120, 600)]):
         c.poly(box, rib)
     for x in range(124, 440, 7):
         c.line([(x, 560), (x, 598)], shade(p, 0.72), 1.2)
-    # set-in sleeve seams
     seam = shade(p, 0.78)
     c.line(bez((150, 84), (118, 170), (114, 250)), seam, 3)
     c.line(bez((410, 84), (442, 170), (446, 250)), seam, 3)
     if front:
-        # hood opening lying around the neck, with the lining showing
         hood = path(bez((180, 76), (190, 20), (280, 14)), bez((280, 14), (370, 20), (380, 76)),
                     bez((380, 76), (330, 150), (280, 158)), bez((280, 158), (230, 150), (180, 76)))
         c.poly(hood, shade(p, 0.9))
@@ -516,11 +455,9 @@ def hoodie(fabric, trim, front=True):
                     bez((354, 70), (320, 128), (280, 132)), bez((280, 132), (240, 128), (206, 70))), shade(p, 0.5))
         c.line(bez((180, 76), (230, 150), (280, 158)), s, 6)
         c.line(bez((380, 76), (330, 150), (280, 158)), s, 6)
-        # drawcords with metal tips
         for x0, x1 in ((252, 244), (308, 318)):
             c.line(bez((x0, 140), (x0 - 4 + (x1 - x0), 210), (x1, 262)), s, 6)
             c.poly([(x1 - 4, 260), (x1 + 4, 260), (x1 + 4, 282), (x1 - 4, 282)], (200, 200, 205))
-        # kangaroo pocket
         pocket = path((170, 380), (390, 380), (430, 520), (130, 520))
         c.shadow(pocket, dx=0, dy=3, blur=4, alpha=40)
         c.poly(pocket, shade(p, 0.96))
@@ -530,7 +467,6 @@ def hoodie(fabric, trim, front=True):
         c.stitch([(176, 386), (384, 386)], thread)
         c.paste(emblem(p, s, 30 * SS), (382, 470))
     else:
-        # the hood lies flat down the back
         hood = path(bez((170, 72), (160, 250), (280, 300)), bez((280, 300), (400, 250), (390, 72)),
                     bez((390, 72), (280, 96), (170, 72)))
         c.shadow(hood, dx=0, dy=6, blur=8, alpha=50)
@@ -544,7 +480,6 @@ def hoodie(fabric, trim, front=True):
 
 
 def towel(fabric, trim):
-    """Sports towel hanging from its loop (480 x 640)."""
     c = Canvas(480, 640)
     p, s = rgb(fabric), rgb(trim)
     c.line(bez((222, 70), (240, 20), (258, 70)), shade(p, 0.6), 8)
@@ -553,7 +488,6 @@ def towel(fabric, trim):
                 bez((240, 596), (162, 606), (102, 590)), bez((102, 590), (88, 330), (96, 90)))
     c.poly(body, p)
     m = c.mask(body)
-    # terry loops
     rnd = random.Random(5)
     lay = c.layer()
     d = ImageDraw.Draw(lay)
@@ -561,14 +495,12 @@ def towel(fabric, trim):
         x, y = rnd.uniform(90, 390) * SS, rnd.uniform(66, 606) * SS
         d.line([(x, y), (x + 1.2 * SS, y + 2.6 * SS)], fill=(0, 0, 0, 20), width=SS)
     c.composite_clipped(lay, m)
-    # woven dobby border near the bottom, in the trim colour (text goes here)
     band = path((96, 470), bez((96, 470), (240, 478), (386, 470)), (386, 538),
                 bez((386, 538), (240, 546), (94, 538)))
     c.poly(band, s)
     edge = shade(s, 0.75) if luminance(s) > 70 else shade(s, 1.5)
     c.line(bez((96, 478), (240, 486), (386, 478)), edge, 2)
     c.line(bez((96, 530), (240, 538), (386, 530)), edge, 2)
-    # hemmed sides and a gentle fold
     c.line(bez((100, 92), (92, 330), (104, 588)), shade(p, 0.8), 4)
     c.line(bez((380, 92), (388, 330), (376, 588)), shade(p, 0.8), 4)
     c.line(bez((96, 76), (240, 72), (384, 76)), shade(p, 0.8), 6)
@@ -580,7 +512,6 @@ def towel(fabric, trim):
 
 
 def backpack_back(fabric, trim):
-    """The same backpack from behind: padded back panel and shoulder straps (520 x 600)."""
     c = Canvas(520, 600)
     p, s = rgb(fabric), rgb(trim)
     c.line(bez((220, 90), (260, 40), (300, 90)), shade(p, 0.6), 12)
@@ -588,7 +519,6 @@ def backpack_back(fabric, trim):
                 (388, 530), bez((388, 530), (260, 552), (132, 530)))
     c.poly(body, p)
     m = c.mask(body)
-    # quilted air-mesh back panel
     panel = path(bez((166, 140), (166, 112), (194, 112)), (326, 112), bez((326, 112), (354, 112), (354, 140)),
                  (358, 470), bez((358, 470), (260, 486), (162, 470)))
     c.poly(panel, shade(p, 0.84))
@@ -597,7 +527,6 @@ def backpack_back(fabric, trim):
     for y in (200, 290, 380):
         c.line([(168, y), (356, y + 2)], shade(p, 0.66), 3)
     c.line([(260, 116), (260, 480)], shade(p, 0.66), 3)
-    # shoulder straps with trim-coloured adjusters and webbing
     strap = shade(p, 0.55)
     for side in (-1, 1):
         x = 260 + side * 62
@@ -608,7 +537,6 @@ def backpack_back(fabric, trim):
         thread = shade(strap, 1.8) if luminance(strap) < 90 else shade(strap, 0.6)
         c.stitch(bez((x - 14, 110), (x + side * 40 - 14, 280), (x + side * 26 - 14, 456)), thread, dash=5, gap=4, width=1)
         c.stitch(bez((x + 14, 110), (x + side * 40 + 14, 280), (x + side * 26 + 14, 456)), thread, dash=5, gap=4, width=1)
-    # sternum strap
     c.line([(214, 250), (306, 250)], shade(p, 0.4), 8)
     c.poly([(248, 242), (272, 242), (272, 258), (248, 258)], s)
     c.light(m, (130, 60, 320, 380), alpha=26, blur=40)
@@ -617,8 +545,6 @@ def backpack_back(fabric, trim):
 
 
 def band_base(fabric, trim, x0, x1, top, bottom, ry, stripes, loops=9000, seed=3):
-    """Round terry band seen a little from above. No logo: the app prints it
-    and turns it round the band."""
     c = Canvas(x1 + x0, bottom + int(ry * 2.2) + 30)
     p, s = rgb(fabric), rgb(trim)
     cx = (x0 + x1) / 2
@@ -638,24 +564,20 @@ def band_base(fabric, trim, x0, x1, top, bottom, ry, stripes, loops=9000, seed=3
                     bez((x1, y + 12), (cx, y + 12 + ry * 1.9), (x0, y + 12))), s)
     c.ellipse((x0, top - ry, x1, top + ry), shade(p, 0.85))
     c.ellipse((x0 + 26, top - ry + 12, x1 - 26, top + ry - 12), shade(p, 0.5))
-    # cylinder shading: lit from the left, turning away on the right
     c.light(m, (x0 - 40, top - 60, x0 + (x1 - x0) * 0.5, bottom + ry * 3), alpha=40, blur=30)
     c.light(m, (x0 + (x1 - x0) * 0.62, top - 80, x1 + 90, bottom + ry * 3), alpha=46, blur=34, colour=(0, 0, 0))
     return c.done()
 
 
 def wristband(fabric, trim):
-    """Terry wristband, slightly from above (520 x 440 canvas)."""
     return band_base(fabric, trim, 90, 430, 140, 250, 50, (158, 220))
 
 
 def headband(fabric, trim):
-    """Wide terry headband (520 x 360 canvas)."""
     return band_base(fabric, trim, 40, 480, 120, 190, 64, (124, 174), loops=12000, seed=9)
 
 
 def bottle(fabric, trim):
-    """Squeeze sports bottle, 750 ml (360 x 640). The print is added by the app."""
     c = Canvas(360, 640)
     p, s = rgb(fabric), rgb(trim)
     cx, r, top, bottom, ry = 180, 104, 190, 590, 16
@@ -665,16 +587,12 @@ def bottle(fabric, trim):
                 bez((cx - r, 350), (cx - r + 12, 300), (cx - r, 250)))
     c.poly(body, p)
     m = c.mask(body)
-    # grip rings at the waist
     for y in (272, 300, 328):
         c.line(bez((cx - r + 8, y), (cx, y + 2 * ry), (cx + r - 8, y)), shade(p, 0.8), 3)
-    # base cup
     c.poly(path((cx - r, 548), bez((cx - r, 548), (cx, 548 + 2 * ry), (cx + r, 548)), (cx + r, bottom),
                 bez((cx + r, bottom), (cx, bottom + 2 * ry), (cx - r, bottom))), shade(p, 0.75))
-    # cylinder shading: highlight strip on the left, falling off to the right
     c.light(m, (cx - r * 0.95, top - 40, cx - r * 0.35, bottom + 40), alpha=70, blur=14)
     c.light(m, (cx + r * 0.35, top - 60, cx + r * 1.6, bottom + 60), alpha=60, blur=22, colour=(0, 0, 0))
-    # lid, spout and flip cap in the trim colour
     lid = s
     lid_dark = shade(s, 0.7) if luminance(s) > 60 else shade(s, 1.6)
     c.poly(path((cx - r + 6, top - 8), bez((cx - r + 6, top - 8), (cx, top - 8 + 2 * ry), (cx + r - 6, top - 8)),
@@ -691,9 +609,6 @@ def bottle(fabric, trim):
     return c.done()
 
 
-# Artwork the app turns round in its 360° view, saved as transparent cut-outs
-# (the app adds the backdrop, shadow and lighting). Basketball, football and
-# cap are not here: the app draws those in 3D and only needs the emblem.
 PRODUCTS = {
     "jersey": jersey,
     "jersey_front": lambda fabric, trim: jersey(fabric, trim, front=True),
@@ -713,7 +628,6 @@ PRODUCTS = {
 }
 
 
-# ============================================================== brand art
 def app_logo():
     S = 256 * SS
     img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
@@ -731,7 +645,7 @@ def app_logo():
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    only = set(sys.argv[2:])  # optional: limit to some products (or "emblem") while tweaking
+    only = set(sys.argv[2:])
     for name, fn in PRODUCTS.items():
         if only and name not in only:
             continue

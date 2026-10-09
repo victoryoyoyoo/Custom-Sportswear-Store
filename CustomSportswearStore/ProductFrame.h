@@ -8,10 +8,6 @@
 class SwatchPicker;
 class Turntable;
 
-// One product page, built entirely from a Product row: colour swatches, size
-// chips, the product's Personalizer (name/number, text, ...), features,
-// quantity and "add to cart". On the left the product turns round in a 360°
-// view that is rebuilt whenever an option changes.
 class ProductFrame : public wxFrame {
 public:
     ProductFrame(wxWindow* parent, int productIndex);
@@ -21,7 +17,7 @@ private:
     const Colorway& CurrentColorway() const;
 
     void BuildLayout();
-    wxStaticText* AddSection(wxSizer* sizer, const wxString& title);  // returns the right-hand value label
+    wxStaticText* AddSection(wxSizer* sizer, const wxString& title);
     wxString DescribeSpec() const;
 
     void RefreshPreview(bool crossfade = false);
@@ -36,11 +32,11 @@ private:
     int m_productIndex;
     std::unique_ptr<Personalizer> m_personalizer;
     int m_quantity = 1;
-    int m_shownSubtotal = -1;       // what the subtotal label shows right now
+    int m_shownSubtotal = -1;
     Widgets::Tween m_subtotalTween;
     bool m_closing = false;
-    bool m_syncingSide = false;     // moving the side chips to follow the 360° view
-    wxString m_previewLook;         // colourway + print the 360° view was built for
+    bool m_syncingSide = false;
+    wxString m_previewLook;
 
     wxPanel* m_root = nullptr;
     wxPanel* m_formCard = nullptr;

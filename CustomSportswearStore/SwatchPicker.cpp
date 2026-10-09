@@ -5,7 +5,7 @@
 #include <memory>
 
 namespace {
-    constexpr int kCellDip = 44;   // one dot + its selection ring
+    constexpr int kCellDip = 44;
     constexpr int kDotDip = 30;
 
     void DrawDot(wxGraphicsContext* gc, const Colorway& c, double cx, double cy, double diameter) {
@@ -16,7 +16,6 @@ namespace {
         const double inner = diameter * 0.72;
         gc->SetBrush(wxBrush(c.fabric));
         gc->DrawEllipse(cx - inner / 2, cy - inner / 2, inner, inner);
-        // hairline so white/light trims stay visible on a white card
         gc->SetBrush(*wxTRANSPARENT_BRUSH);
         gc->SetPen(wxPen(wxColour(0, 0, 0, 40), 1));
         gc->DrawEllipse(cx - r, cy - r, diameter, diameter);
@@ -25,7 +24,7 @@ namespace {
 
 SwatchPicker::SwatchPicker(wxWindow* parent, int columns)
     : wxPanel(parent, wxID_ANY), m_columns(columns) {
-    SetBackgroundStyle(wxBG_STYLE_PAINT);  // we paint everything; avoids flicker
+    SetBackgroundStyle(wxBG_STYLE_PAINT);
     const int count = (int)Catalog::Colorways().size();
     const int rows = (count + columns - 1) / columns;
     SetMinSize(FromDIP(wxSize(columns * kCellDip, rows * kCellDip)));
@@ -41,7 +40,6 @@ void SwatchPicker::SetSelection(int index) {
     if (index < 0 || index >= (int)Catalog::Colorways().size() || index == m_selected) return;
     m_previous = m_selected;
     m_selected = index;
-    // The orange ring grows out of the new dot while the old one fades away.
     m_ringTween.Start(260, [this](double t) {
         m_ring = t;
         Refresh(false);

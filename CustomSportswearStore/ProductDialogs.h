@@ -5,11 +5,10 @@
 #include "Catalog.h"
 #include "Widgets.h"
 
-// Suggests a size from height/weight (apparel) or foot length (shoes).
 class SizeAdvisorDialog : public wxDialog {
 public:
     SizeAdvisorDialog(wxWindow* parent, const Product& product);
-    int Recommended() const { return m_recommended; }  // index into product.sizes
+    int Recommended() const { return m_recommended; }
 
 private:
     void Recalculate();
@@ -23,8 +22,6 @@ private:
     wxStaticText* m_detail = nullptr;
 };
 
-// A whole team's jerseys in one go: one row per player (name, number, size).
-// Rows can be added, removed, or pasted from a spreadsheet.
 class TeamOrderDialog : public wxDialog {
 public:
     struct Player {

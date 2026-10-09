@@ -7,7 +7,7 @@ class StoreApp : public wxApp {
 public:
     bool OnInit() override {
         if (!wxApp::OnInit()) return false;
-        SetAppName(wxT("CustomSportswearStore"));  // registry key for saved settings, whatever the exe is called
+        SetAppName(wxT("CustomSportswearStore"));
         wxInitAllImageHandlers();
         SetAppDisplayName(L(wxT("運動用品客製購物系統"), wxT("Custom Sportswear Store")));
         WelcomeFrame* frame = new WelcomeFrame();

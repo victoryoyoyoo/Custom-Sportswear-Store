@@ -25,7 +25,6 @@ namespace {
         return wxDateTime::Now().Format(wxT("CS%Y%m%d-")) + wxString::Format(wxT("%04d"), dist(rng));
     }
 
-    // One "label ........ value" line of a price summary.
     wxStaticText* AddSummaryRow(wxWindow* parent, wxSizer* sizer, const wxString& label, int pointSize, bool bold,
                                 const wxColour& valueColour, wxStaticText** labelOut = nullptr) {
         wxBoxSizer* row = new wxBoxSizer(wxHORIZONTAL);
@@ -39,7 +38,6 @@ namespace {
         return value;
     }
 
-    // A header + step indicator block shared by the three checkout dialogs.
     void AddDialogTop(wxDialog* dialog, wxSizer* root, const wxString& title, const wxString& subtitle, int step) {
         root->Add(Theme::MakeHeader(dialog, title, subtitle), 0, wxEXPAND);
         root->Add(new Widgets::StepIndicator(dialog, Steps(), step), 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP,
@@ -71,7 +69,6 @@ namespace {
         return bmp;
     }
 
-    // Empty-cart illustration: a bag outline in a soft circle.
     wxBitmap RenderEmptyBag(const wxSize& px) {
         const int d = std::min(px.x, px.y);
         wxBitmap bmp(d, d, 24);
@@ -101,9 +98,6 @@ wxString CartButtonLabel() {
     return wxString::Format(L(wxT("  購物車  %d 件｜%s  "), wxT("  Cart  %d | %s  ")), cart.TotalQuantity(), Theme::FormatPrice(cart.Subtotal()));
 }
 
-// ===========================================================================
-// CartDialog
-// ===========================================================================
 CartDialog::CartDialog(wxWindow* parent)
     : wxDialog(parent, wxID_ANY, L(wxT("購物車｜運動用品客製購物系統"), wxT("Cart | Custom Sportswear Store")), wxDefaultPosition, wxDefaultSize,
                wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER | wxMAXIMIZE_BOX) {
@@ -113,7 +107,6 @@ CartDialog::CartDialog(wxWindow* parent)
 
     wxBoxSizer* columns = new wxBoxSizer(wxHORIZONTAL);
 
-    // ---------------- left: items ----------------
     Widgets::Card* itemsCard = Theme::MakeCard(this);
     wxBoxSizer* itemsCardSizer = new wxBoxSizer(wxVERTICAL);
 
@@ -153,7 +146,6 @@ CartDialog::CartDialog(wxWindow* parent)
     m_itemsPanel->SetSizer(items);
     itemsCardSizer->Add(m_itemsPanel, 1, wxEXPAND | wxALL, FromDIP(24));
 
-    // empty state
     m_emptyPanel = new wxPanel(itemsCard);
     m_emptyPanel->SetBackgroundColour(Theme::kCard);
     wxBoxSizer* empty = new wxBoxSizer(wxVERTICAL);
@@ -171,7 +163,6 @@ CartDialog::CartDialog(wxWindow* parent)
     itemsCard->SetSizer(itemsCardSizer);
     columns->Add(itemsCard, 1, wxEXPAND | wxRIGHT, FromDIP(4));
 
-    // ---------------- right: summary ----------------
     Widgets::Card* summaryCard = Theme::MakeCard(this);
     wxBoxSizer* summary = new wxBoxSizer(wxVERTICAL);
     summary->Add(Theme::MakeLabel(summaryCard, L(wxT("訂單摘要"), wxT("Summary")), 13, true));
@@ -215,7 +206,6 @@ CartDialog::CartDialog(wxWindow* parent)
 
     root->Add(columns, 1, wxEXPAND | wxALL, FromDIP(16));
     SetSizer(root);
-    // Size with only one of the two left-hand panels (items / empty) visible.
     m_itemsPanel->Show(!ShoppingCart::Get().IsEmpty());
     m_emptyPanel->Show(ShoppingCart::Get().IsEmpty());
     const wxSize needed = root->ComputeFittingClientSize(this);
@@ -239,7 +229,6 @@ CartDialog::CartDialog(wxWindow* parent)
         if (e.GetKeyCode() == WXK_DELETE) OnRemove();
         else e.Skip();
     });
-    // The spec column takes the spare width so the table always fills the card.
     m_list->Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
         int others = 0;
         for (int col = 0; col < m_list->GetColumnCount(); ++col)
@@ -266,7 +255,6 @@ void CartDialog::RefreshCart() {
     m_itemsPanel->Show(!empty);
     m_emptyPanel->Show(empty);
 
-    // Thumbnails are rebuilt with the rows; carts are small, so this is cheap.
     if (m_list->GetItemCount() != (int)items.size()) {
         const int thumb = FromDIP(52);
         wxImageList* images = new wxImageList(thumb, thumb, false);
@@ -312,7 +300,6 @@ void CartDialog::RefreshCart() {
         m_shippingHint->SetForegroundColour(Theme::kSuccess);
         m_shippingHint->SetLabel(L(wxT("已達免運門檻"), wxT("Free shipping unlocked")));
     }
-    // A coupon applied earlier may stop qualifying after the cart changes.
     if (const Coupon* c = cart.AppliedCoupon()) {
         const wxString problem = cart.CouponProblem(*c);
         m_couponMessage->SetForegroundColour(problem.IsEmpty() ? Theme::kSuccess : Theme::kOrangeDark);
@@ -386,14 +373,11 @@ void CartDialog::OnCheckout() {
     EndModal(wxID_OK);
 }
 
-// ===========================================================================
-// CheckoutDialog
-// ===========================================================================
 CheckoutDialog::CheckoutDialog(wxWindow* parent)
     : wxDialog(parent, wxID_ANY, L(wxT("填寫收件資料｜運動用品客製購物系統"), wxT("Shipping Details | Custom Sportswear Store"))) {
     SetBackgroundColour(Theme::kPage);
     const ShoppingCart& cart = ShoppingCart::Get();
-    m_fields.reserve(4);  // Field references and callbacks must stay valid
+    m_fields.reserve(4);
 
     wxBoxSizer* root = new wxBoxSizer(wxVERTICAL);
     AddDialogTop(this, root, L(wxT("填寫收件資料"), wxT("Shipping details")),
@@ -423,7 +407,6 @@ CheckoutDialog::CheckoutDialog(wxWindow* parent)
         return wxString();
     });
 
-    // delivery method
     grid->Add(Theme::MakeLabel(card, L(wxT("配送方式"), wxT("Delivery")), 11, false, Theme::kMuted), 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
     wxPanel* delivery = new wxPanel(card);
     delivery->SetBackgroundColour(Theme::kCard);
@@ -441,7 +424,6 @@ CheckoutDialog::CheckoutDialog(wxWindow* parent)
         if (Address().length() >= 5) return wxString();
         return wxString(m_storePickup->GetValue() ? L(wxT("請填寫完整的取貨門市"), wxT("Please enter the pickup store")) : L(wxT("請填寫完整的收件地址"), wxT("Please enter the full address")));
     });
-    // AddField put the label in the cell just before the input.
     m_addressLabel = wxDynamicCast(grid->GetItem(grid->GetItemCount() - 4)->GetWindow(), wxStaticText);
 
     grid->Add(Theme::MakeLabel(card, L(wxT("付款方式"), wxT("Payment")), 11, false, Theme::kMuted), 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT);
@@ -483,7 +465,6 @@ CheckoutDialog::CheckoutDialog(wxWindow* parent)
 
 CheckoutDialog::Field& CheckoutDialog::AddField(wxWindow* parent, wxFlexGridSizer* grid, const wxString& label,
                                                 const wxString& hint, int maxLength, std::function<wxString()> check) {
-    // Same top border as the input so the two line up.
     grid->Add(Theme::MakeLabel(parent, label, 11, false, Theme::kMuted), 0, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT | wxTOP, FromDIP(6));
     wxTextCtrl* input = new wxTextCtrl(parent, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(340, -1)));
     input->SetFont(Theme::Font(11));
@@ -496,8 +477,6 @@ CheckoutDialog::Field& CheckoutDialog::AddField(wxWindow* parent, wxFlexGridSize
 
     m_fields.push_back({ input, error, std::move(check) });
     const size_t index = m_fields.size() - 1;
-    // Check a field once the user leaves it, then keep it live so the message
-    // disappears as soon as the input is fixed.
     input->Bind(wxEVT_KILL_FOCUS, [this, index](wxFocusEvent& e) {
         m_fields[index].touched = true;
         ValidateField(m_fields[index]);
@@ -562,9 +541,6 @@ void CheckoutDialog::OnConfirm() {
     EndModal(wxID_OK);
 }
 
-// ===========================================================================
-// OrderCompleteDialog
-// ===========================================================================
 OrderCompleteDialog::OrderCompleteDialog(wxWindow* parent, const CheckoutDialog& info, const wxString& orderNumber)
     : wxDialog(parent, wxID_ANY, L(wxT("訂購完成｜運動用品客製購物系統"), wxT("Order Placed | Custom Sportswear Store"))) {
     SetBackgroundColour(Theme::kPage);
@@ -579,7 +555,6 @@ OrderCompleteDialog::OrderCompleteDialog(wxWindow* parent, const CheckoutDialog&
     body->Add(Theme::MakeLabel(card, L(wxT("訂單已成立，謝謝您的購買！"), wxT("Your order is in. Thank you!")), 16, true), 0, wxALIGN_CENTER | wxTOP, FromDIP(12));
     body->Add(Theme::MakeLabel(card, L(wxT("訂單編號  "), wxT("Order number  ")) + orderNumber, 12, true, Theme::kOrange), 0, wxALIGN_CENTER | wxTOP, FromDIP(4));
 
-    // items + totals on a pale panel
     wxPanel* box = new wxPanel(card);
     box->SetBackgroundColour(wxColour(246, 248, 251));
     wxBoxSizer* lines = new wxBoxSizer(wxVERTICAL);
@@ -648,7 +623,6 @@ OrderCompleteDialog::OrderCompleteDialog(wxWindow* parent, const CheckoutDialog&
 }
 
 void OrderCompleteDialog::SaveReceipt(wxWindow* receipt, const wxString& orderNumber) {
-    // Copy what's on screen for the receipt card into a bitmap, then ask where to save it.
     const wxSize size = receipt->GetClientSize();
     wxBitmap image(size.x, size.y, 24);
     {
@@ -666,9 +640,6 @@ void OrderCompleteDialog::SaveReceipt(wxWindow* receipt, const wxString& orderNu
         Theme::Inform(this, L(wxT("儲存收據"), wxT("Save receipt")), L(wxT("無法儲存到這個位置，請換一個資料夾。"), wxT("Couldn't save there. Please choose another folder.")), true);
 }
 
-// ===========================================================================
-// OrdersDialog
-// ===========================================================================
 OrdersDialog::OrdersDialog(wxWindow* parent)
     : wxDialog(parent, wxID_ANY, L(wxT("我的訂單｜運動用品客製購物系統"), wxT("My Orders | Custom Sportswear Store")), wxDefaultPosition, wxDefaultSize,
                wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER | wxMAXIMIZE_BOX) {
@@ -769,8 +740,6 @@ void OrdersDialog::ShowOrder(long index) {
         r->Add(Theme::MakeLabel(m_detail, right, bold ? 13 : 10, bold, colour), 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(12));
         s->Add(r, 0, wxEXPAND | wxBOTTOM, FromDIP(6));
     };
-    // Two lines per item: title and price, then the spec in small grey text,
-    // so a long spec (name, number, team) never gets cut off.
     for (const CartItem& item : o.items) {
         row(wxString::Format(wxT("%s × %d"), item.Title(), item.quantity), Theme::FormatPrice(item.Subtotal()),
             Theme::kText, false, false);
