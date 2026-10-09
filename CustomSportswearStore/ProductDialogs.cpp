@@ -8,9 +8,6 @@
 #include <cmath>
 #include <map>
 
-// ===========================================================================
-// SizeAdvisorDialog
-// ===========================================================================
 SizeAdvisorDialog::SizeAdvisorDialog(wxWindow* parent, const Product& product)
     : wxDialog(parent, wxID_ANY, L(wxT("尺寸建議｜運動用品客製購物系統"), wxT("Size Advice | Custom Sportswear Store"))), m_product(product) {
     SetBackgroundColour(Theme::kPage);
@@ -83,11 +80,9 @@ SizeAdvisorDialog::SizeAdvisorDialog(wxWindow* parent, const Product& product)
 void SizeAdvisorDialog::Recalculate() {
     const int count = (int)m_product.sizes.size();
     if (m_footLength) {
-        // EU 38 fits a 24.0 cm foot and every size adds 0.5 cm; round up.
         const double length = m_footLength->GetValue();
         m_recommended = std::clamp((int)std::ceil((length - 24.0) / 0.5 - 1e-9), 0, count - 1);
     } else {
-        // Height picks the base size, build nudges it one either way.
         const int height = m_height->GetValue();
         const double metres = height / 100.0;
         const double bmi = m_weight->GetValue() / (metres * metres);
@@ -102,9 +97,6 @@ void SizeAdvisorDialog::Recalculate() {
     Layout();
 }
 
-// ===========================================================================
-// TeamOrderDialog
-// ===========================================================================
 TeamOrderDialog::TeamOrderDialog(wxWindow* parent, const Product& product, const Colorway& colorway,
                                  const wxString& team)
     : wxDialog(parent, wxID_ANY, L(wxT("團體訂購｜運動用品客製購物系統"), wxT("Team Order | Custom Sportswear Store")), wxDefaultPosition, wxDefaultSize,
@@ -129,7 +121,6 @@ TeamOrderDialog::TeamOrderDialog(wxWindow* parent, const Product& product, const
     teamRow->Add(m_team, 1, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(12));
     body->Add(teamRow, 0, wxEXPAND);
 
-    // column titles, same widths as the rows below
     wxBoxSizer* head = new wxBoxSizer(wxHORIZONTAL);
     auto title = [&](const wxString& text, int widthDip, int proportion) {
         wxStaticText* t = Theme::MakeLabel(card, text, 10, true, Theme::kMuted);
@@ -234,7 +225,6 @@ void TeamOrderDialog::AddRow(const wxString& name, int number, int sizeIndex) {
     nameCtrl->Bind(wxEVT_TEXT, [this](wxCommandEvent&) { RefreshSummary(); });
     numberCtrl->Bind(wxEVT_SPINCTRL, [this](wxSpinEvent&) { RefreshSummary(); });
     numberCtrl->Bind(wxEVT_TEXT, [this](wxCommandEvent&) { RefreshSummary(); });
-    // The button can't destroy its own row while its click is still being handled.
     remove->Bind(wxEVT_BUTTON, [this, panel](wxCommandEvent&) { CallAfter([this, panel] { RemoveRow(panel); }); });
 
     m_list->FitInside();
@@ -265,7 +255,6 @@ void TeamOrderDialog::PasteRoster() {
     }
     std::vector<Player> pasted;
     for (const wxString& line : wxStringTokenize(text, wxT("\r\n"), wxTOKEN_STRTOK)) {
-        // "WANG 7 L", "WANG,7,L" or tab-separated from a spreadsheet; number and size optional.
         wxArrayString parts = wxStringTokenize(line, wxT(" \t,，"), wxTOKEN_STRTOK);
         if (parts.empty()) continue;
         Player p{ parts[0].Upper(), 0, m_product.defaultSize };
@@ -285,7 +274,6 @@ void TeamOrderDialog::PasteRoster() {
         Layout();
         return;
     }
-    // Rows the user hasn't filled in make way for the pasted roster.
     std::vector<wxPanel*> blank;
     for (const Row& r : m_rows)
         if (r.name->GetValue().Trim().IsEmpty()) blank.push_back(r.panel);

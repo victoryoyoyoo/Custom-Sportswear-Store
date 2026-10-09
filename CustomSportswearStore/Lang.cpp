@@ -3,7 +3,6 @@
 #include <wx/intl.h>
 
 namespace {
-    // First run: the system's language. After that: whatever was last chosen.
     bool StartsInEnglish() {
         long saved = -1;
         if (wxConfigBase* config = wxConfigBase::Get()) config->Read(wxT("Language/English"), &saved);
@@ -12,7 +11,7 @@ namespace {
         return !(info && info->CanonicalName.StartsWith(wxT("zh")));
     }
 
-    int g_english = -1;  // -1 until first asked (the config needs the app to exist)
+    int g_english = -1;
 }
 
 namespace Lang {

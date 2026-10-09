@@ -28,7 +28,6 @@ LauncherFrame::LauncherFrame()
     rootSizer->Add(header, 0, wxEXPAND);
     rootSizer->AddSpacer(FromDIP(28));
 
-    // Intro: eyebrow tag + heading on the left, category filter on the right.
     wxBoxSizer* intro = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer* heading = new wxBoxSizer(wxVERTICAL);
     heading->Add(Theme::MakeEyebrow(root, L(wxT("SHOP ALL"), wxT("TEAMWEAR · GEAR"))));
@@ -51,7 +50,6 @@ LauncherFrame::LauncherFrame()
     wxSizerItem* introItem = rootSizer->Add(intro, 0, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(36));
     rootSizer->AddSpacer(FromDIP(14));
 
-    // The cards scroll under the fixed header and filters.
     const int count = (int)Catalog::Products().size();
     m_scroll = new wxScrolledWindow(root, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL | wxBORDER_NONE);
     m_scroll->SetBackgroundColour(Theme::kPage);
@@ -64,7 +62,6 @@ LauncherFrame::LauncherFrame()
     wxBoxSizer* scrollSizer = new wxBoxSizer(wxVERTICAL);
     scrollSizer->Add(m_grid, 0, wxEXPAND | wxBOTTOM, FromDIP(6));
     m_scroll->SetSizer(scrollSizer);
-    // Pictures keep the card's proportions as the columns get wider.
     m_scroll->Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
         const int column = (m_scroll->GetClientSize().x - FromDIP(12)) / 4 - FromDIP(36);
         const int height = std::max(FromDIP(150), column * 64 / 100);
@@ -120,13 +117,11 @@ LauncherFrame::LauncherFrame()
     });
     quit->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { Close(); });
     Bind(wxEVT_CLOSE_WINDOW, [](wxCloseEvent& event) {
-        if (Theme::CanClosePage(event)) event.Skip();  // default handler destroys the frame
+        if (Theme::CanClosePage(event)) event.Skip();
     });
-    // Coming back from a product page: the cart may have changed there.
     Bind(wxEVT_SHOW, [this](wxShowEvent& event) {
         if (event.IsShown()) {
             RefreshCartButton();
-            // A product page may have changed a favourite.
             for (size_t i = 0; i < m_hearts.size(); ++i) m_hearts[i]->SetOn(Favorites::Get().Has((int)i));
             ApplyFilter();
         }
@@ -137,11 +132,7 @@ LauncherFrame::LauncherFrame()
 }
 
 void LauncherFrame::ApplyFilter() {
-    // Rebuild the grid with just the matching cards, so the remaining ones
-    // close up instead of leaving holes where hidden cards were.
     const wxString query = m_search->GetValue().Trim().Trim(false).Lower();
-    // Work out which cards match first, so the entrance animation only plays
-    // when the set actually changes (not on every keystroke or page return).
     std::vector<bool> matches(m_cards.size());
     for (size_t i = 0; i < m_cards.size(); ++i) {
         const Product& p = Catalog::Products()[i];
@@ -156,17 +147,15 @@ void LauncherFrame::ApplyFilter() {
     m_lastMatches = matches;
 
     m_root->Freeze();
-    m_grid->Clear(false);  // detach, don't delete
+    m_grid->Clear(false);
     int shown = 0;
     for (size_t i = 0; i < m_cards.size(); ++i) {
         m_cards[i]->Show(matches[i]);
         if (!matches[i]) continue;
         m_grid->Add(m_cards[i], 1, wxEXPAND);
-        // Pictures fade in one after another, left to right, top to bottom.
         if (changed) m_pictures[i]->PlayIntro(70 * shown);
         ++shown;
     }
-    // Fill out the first row so a single match keeps its normal width.
     for (int filler = shown; filler < 4; ++filler) m_grid->AddStretchSpacer();
 
     m_empty->Show(shown == 0);
@@ -194,8 +183,6 @@ wxWindow* LauncherFrame::MakeProductCard(wxWindow* parent, int productIndex) {
     wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
     const int pad = FromDIP(24);
 
-    // The picture takes the spare height, so the grid fills a maximised or
-    // full-screen window instead of leaving an empty band.
     auto* picture = new Theme::ImagePanel(card, wxSize(210, 150), [&product](const wxSize& px) {
         return Showcase::Tile(product, px, Theme::kCard);
     });
@@ -227,11 +214,10 @@ wxWindow* LauncherFrame::MakeProductCard(wxWindow* parent, int productIndex) {
     card->SetSizer(sizer);
     if (!Lang::English()) card->SetToolTip(product.englishName);
 
-    // Every part of the card opens the product.
     auto open = [this, productIndex](wxMouseEvent&) { OpenProduct(productIndex); };
     card->Bind(wxEVT_LEFT_UP, open);
     for (wxWindow* child : card->GetChildren()) {
-        if (child == heart) continue;  // the heart has its own click
+        if (child == heart) continue;
         child->SetCursor(wxCursor(wxCURSOR_HAND));
         child->Bind(wxEVT_LEFT_UP, open);
     }
@@ -239,9 +225,6 @@ wxWindow* LauncherFrame::MakeProductCard(wxWindow* parent, int productIndex) {
 }
 
 void LauncherFrame::OpenProduct(int productIndex) {
-    // Ignore a second click while the first page is still fading in. A time
-    // window rather than an on/off flag can never get stuck, even if the fade
-    // is cut short.
     const wxLongLong now = wxGetLocalTimeMillis();
     if (now - m_lastOpenMs < 600) return;
     m_lastOpenMs = now;
@@ -249,8 +232,6 @@ void LauncherFrame::OpenProduct(int productIndex) {
     auto* page = new ProductFrame(this, productIndex);
     wxWeakRef<ProductFrame> alive(page);
     Theme::ShowLike(page, this, [this, alive] {
-        // If the page was closed while it was still fading in, stay visible:
-        // hiding now would leave no window on screen with the app still running.
         if (alive && alive->IsShown()) Hide();
     });
 }

@@ -18,9 +18,6 @@ namespace {
     wxColour WithAlpha(const wxColour& c, int alpha) { return wxColour(c.Red(), c.Green(), c.Blue(), alpha); }
 }
 
-// ---------------------------------------------------------------------------
-// Tween
-// ---------------------------------------------------------------------------
 void Tween::Start(int durationMs, std::function<void(double)> onStep, std::function<void()> onDone) {
     m_durationMs = std::max(1, durationMs);
     m_onStep = std::move(onStep);
@@ -33,17 +30,15 @@ void Tween::Start(int durationMs, std::function<void(double)> onStep, std::funct
 void Tween::Notify() {
     const double t = std::min(1.0, (wxGetLocalTimeMillis() - m_startMs).ToDouble() / m_durationMs);
     if (m_onStep) {
-        // Call a copy: the step may start this tween again, which would
-        // replace m_onStep while it is still running.
         const wxLongLong startedAt = m_startMs;
         auto step = m_onStep;
         step(EaseOut(t));
-        if (m_startMs != startedAt || !IsRunning()) return;  // restarted or stopped
+        if (m_startMs != startedAt || !IsRunning()) return;
     }
     if (t >= 1.0) {
         Stop();
         if (m_onDone) {
-            auto done = std::move(m_onDone);  // may start a new tween
+            auto done = std::move(m_onDone);
             m_onDone = nullptr;
             done();
         }
@@ -60,9 +55,6 @@ wxColour Mix(const wxColour& from, const wxColour& to, double t) {
     return wxColour(lerp(from.Red(), to.Red()), lerp(from.Green(), to.Green()), lerp(from.Blue(), to.Blue()));
 }
 
-// ---------------------------------------------------------------------------
-// FlatButton
-// ---------------------------------------------------------------------------
 FlatButton::FlatButton(wxWindow* parent, const wxString& label, Style style, int pointSize, int heightDip)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE | wxWANTS_CHARS),
       m_style(style), m_heightDip(heightDip) {
@@ -182,12 +174,10 @@ void FlatButton::OnPaint(wxPaintEvent&) {
     }
 
     const wxSize size = GetClientSize();
-    // Pressing shrinks the button by a pixel or two: reads as a physical press.
     const double inset = m_pressed ? FromDIP(1.5) : 0.0;
     const double w = size.x - 2 * inset, h = size.y - 2 * inset;
     const double radius = m_style == Style::Primary ? h / 2 : FromDIP(10);
 
-    // Primary buttons sit on a soft coloured glow that grows on hover.
     if (m_style == Style::Primary && IsEnabled()) {
         for (int i = 3; i >= 1; --i) {
             const double grow = i * (1.0 + m_hover);
@@ -199,7 +189,6 @@ void FlatButton::OnPaint(wxPaintEvent&) {
     gc->SetPen(*wxTRANSPARENT_PEN);
     gc->SetBrush(wxBrush(fill));
     gc->DrawRoundedRectangle(inset, inset, w, h, radius);
-    // top highlight for a hint of volume
     gc->SetBrush(gc->CreateLinearGradientBrush(0, inset, 0, inset + h / 2, WithAlpha(*wxWHITE, 26), WithAlpha(*wxWHITE, 0)));
     gc->DrawRoundedRectangle(inset, inset, w, h / 2, radius);
 
@@ -215,7 +204,7 @@ void FlatButton::OnPaint(wxPaintEvent&) {
     gc->GetTextExtent(GetLabel(), &tw, &th);
     double textX = (size.x - tw) / 2;
     if (m_arrow) {
-        const double d = h - FromDIP(10);                  // arrow bubble diameter
+        const double d = h - FromDIP(10);
         const double bx = inset + w - d - FromDIP(5) + m_hover * FromDIP(3);
         const double by = inset + (h - d) / 2;
         textX = inset + (w - d - FromDIP(10) - tw) / 2 + FromDIP(4);
@@ -234,13 +223,10 @@ void FlatButton::OnPaint(wxPaintEvent&) {
     gc->DrawText(GetLabel(), textX, (size.y - th) / 2);
 }
 
-// ---------------------------------------------------------------------------
-// Card
-// ---------------------------------------------------------------------------
 Card::Card(wxWindow* parent, bool hoverable)
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE | wxTAB_TRAVERSAL) {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
-    SetBackgroundColour(Theme::kCard);  // children (labels, pictures) sit on white
+    SetBackgroundColour(Theme::kCard);
     Bind(wxEVT_PAINT, &Card::OnPaint, this);
     Bind(wxEVT_SIZE, [this](wxSizeEvent& e) {
         Refresh();
@@ -280,8 +266,6 @@ void Card::OnPaint(wxPaintEvent&) {
     const double radius = FromDIP(18);
     const wxRect2DDouble shell(m - shellPad, m - shellPad, size.x - 2 * (m - shellPad), size.y - 2 * (m - shellPad));
 
-    // Ambient shadow: stacked, very faint rounded rects, a little lower than
-    // the card, spreading further when the card is lifted by hover.
     gc->SetPen(*wxTRANSPARENT_PEN);
     const int layers = 6;
     for (int i = layers; i >= 1; --i) {
@@ -292,7 +276,6 @@ void Card::OnPaint(wxPaintEvent&) {
                                  shell.m_width + 2 * spread, shell.m_height + 2 * spread, radius + spread);
     }
 
-    // Shell: a thin tinted rim around the white core (concentric corners).
     gc->SetBrush(wxBrush(Mix(wxColour(236, 240, 246), wxColour(255, 236, 224), m_hover)));
     gc->SetPen(wxPen(Mix(wxColour(222, 228, 237), Theme::kOrange, m_hover * 0.8), 1));
     gc->DrawRoundedRectangle(shell.m_x, shell.m_y, shell.m_width, shell.m_height, radius);
@@ -301,9 +284,6 @@ void Card::OnPaint(wxPaintEvent&) {
     gc->DrawRoundedRectangle(m, m, size.x - 2 * m, size.y - 2 * m, radius - shellPad);
 }
 
-// ---------------------------------------------------------------------------
-// ChipPicker
-// ---------------------------------------------------------------------------
 ChipPicker::ChipPicker(wxWindow* parent, const std::vector<wxString>& labels, int selection)
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE | wxWANTS_CHARS),
       m_labels(labels), m_selected(selection) {
@@ -378,9 +358,6 @@ void ChipPicker::OnPaint(wxPaintEvent&) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// HeartToggle
-// ---------------------------------------------------------------------------
 HeartToggle::HeartToggle(wxWindow* parent, bool on, int sizeDip)
     : wxControl(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE), m_on(on), m_sizeDip(sizeDip) {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
@@ -396,12 +373,11 @@ HeartToggle::HeartToggle(wxWindow* parent, bool on, int sizeDip)
     Bind(wxEVT_LEFT_UP, [this](wxMouseEvent&) {
         m_on = !m_on;
         m_popTween.Start(320, [this](double t) {
-            m_pop = std::sin(t * 3.14159265358979);  // up and back down
+            m_pop = std::sin(t * 3.14159265358979);
             Refresh();
         });
         if (m_onToggle) m_onToggle(m_on);
     });
-    // Clicks on the heart shouldn't also count as clicks on whatever it sits on.
     Bind(wxEVT_LEFT_DOWN, [](wxMouseEvent&) {});
 }
 
@@ -423,7 +399,6 @@ void HeartToggle::OnPaint(wxPaintEvent&) {
     gc->SetBrush(wxBrush(*wxWHITE));
     gc->DrawEllipse(cx - d / 2, cy - d / 2, d, d);
 
-    // Heart made of two arcs and a point, scaled up a little while it "pops".
     const double r = d * 0.15 * (1.0 + 0.25 * m_pop);
     const double top = cy - r * 0.55;
     wxGraphicsPath heart = gc->CreatePath();
@@ -442,9 +417,6 @@ void HeartToggle::OnPaint(wxPaintEvent&) {
     gc->DrawPath(heart);
 }
 
-// ---------------------------------------------------------------------------
-// ProgressBar
-// ---------------------------------------------------------------------------
 ProgressBar::ProgressBar(wxWindow* parent) : wxPanel(parent, wxID_ANY) {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
     SetMinSize(wxSize(-1, FromDIP(8)));
@@ -480,9 +452,6 @@ void ProgressBar::OnPaint(wxPaintEvent&) {
     gc->DrawRoundedRectangle(0, 0, w, s.y, r);
 }
 
-// ---------------------------------------------------------------------------
-// StepIndicator
-// ---------------------------------------------------------------------------
 StepIndicator::StepIndicator(wxWindow* parent, const std::vector<wxString>& steps, int current)
     : wxPanel(parent, wxID_ANY), m_steps(steps), m_current(current) {
     SetBackgroundStyle(wxBG_STYLE_PAINT);
@@ -499,7 +468,6 @@ void StepIndicator::OnPaint(wxPaintEvent&) {
     const int n = (int)m_steps.size();
     const double d = FromDIP(24), cy = s.y / 2.0;
 
-    // Measure each "circle + label" and lay them out evenly with connectors.
     std::vector<double> widths;
     double total = 0;
     gc->SetFont(GetFont(), Theme::kText);
@@ -544,9 +512,6 @@ void StepIndicator::OnPaint(wxPaintEvent&) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Toast
-// ---------------------------------------------------------------------------
 namespace {
     class Toast : public wxFrame {
     public:
@@ -597,7 +562,6 @@ namespace {
         }
 
     private:
-        // Just under the header, below the cart button it refers to.
         void Place(double offset) {
             if (!m_owner) return;
             const wxPoint client = m_owner->ClientToScreen(wxPoint(0, 0));
@@ -610,9 +574,6 @@ namespace {
             e.Skip();
         }
 
-        // The page can close while the toast is still up (add to cart, then
-        // straight back to the list), and the toast is deleted after its owner.
-        // Drop the owner pointer here so the destructor never touches it.
         void OnOwnerDestroyed(wxWindowDestroyEvent& e) {
             if (e.GetEventObject() == m_owner) {
                 ForgetOwner();
@@ -685,12 +646,7 @@ void ShowToast(wxFrame* owner, const wxString& title, const wxString& detail, st
     (new Toast(owner, title, detail, std::move(onClick)))->Present();
 }
 
-// ---------------------------------------------------------------------------
-// FadeIn
-// ---------------------------------------------------------------------------
 namespace {
-    // Owns its timer and deletes itself when done, or when the window goes
-    // away mid-fade.
     class Fader : public Tween {
     public:
         Fader(wxTopLevelWindow* window, std::function<void()> onShown)
@@ -733,4 +689,4 @@ void FadeIn(wxTopLevelWindow* window, std::function<void()> show, std::function<
     (new Fader(window, std::move(onShown)))->Run();
 }
 
-}  // namespace Widgets
+}

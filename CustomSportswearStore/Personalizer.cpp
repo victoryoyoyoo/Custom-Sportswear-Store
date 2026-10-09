@@ -15,8 +15,6 @@ namespace {
         return upper ? s.Upper() : s;
     }
 
-    // Heat-press look: the outline colour is stamped in a small circle, then
-    // the fill goes on top.
     void DrawOutlinedText(wxGraphicsContext* gc, const wxString& text, const wxFont& font, double centerX,
                           double top, const wxColour& fill, const wxColour& outline, double stroke) {
         wxDouble w, h;
@@ -31,7 +29,6 @@ namespace {
         gc->DrawText(text, x, top);
     }
 
-    // Largest font (up to the area's height) whose text fits the area's width.
     wxFont FitFont(wxGraphicsContext* gc, const wxString& text, const wxString& face, bool bold,
                    double maxWidth, double height) {
         int px = std::max(8, (int)height);
@@ -86,7 +83,7 @@ wxImage Personalizer::TextDecal(const wxString& text, const wxSize& pixels, cons
         const double top = (pixels.y - font.GetPixelSize().GetHeight()) / 2.0;
         DrawOutlinedText(gc.get(), text, font, pixels.x / 2.0, top, fill, outline, stroke);
     }
-    gc.reset();  // writes the drawing back into the image
+    gc.reset();
     return image;
 }
 
@@ -100,9 +97,6 @@ std::unique_ptr<Personalizer> Personalizer::For(const Product& product) {
     return std::make_unique<Personalizer>(product);
 }
 
-// ---------------------------------------------------------------------------
-// Name + number (jersey)
-// ---------------------------------------------------------------------------
 void NameAndNumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int)> onChange) {
     wxFlexGridSizer* grid = new wxFlexGridSizer(2, 2, parent->FromDIP(6), parent->FromDIP(16));
     grid->Add(Theme::MakeLabel(parent, L(wxT("背號（0–99）"), wxT("Number (0–99)")), 10, false, Theme::kMuted));
@@ -119,7 +113,6 @@ void NameAndNumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, 
     m_team = MakeText(parent, 14, L(wxT("例如：TIGERS"), wxT("e.g. TIGERS")));
     sizer->Add(m_team, 0, wxEXPAND);
 
-    // Name and number go on the back (the side the page opens on), the team on the front.
     BindChange(m_number, onChange, 0);
     BindChange(m_name, onChange, 0);
     BindChange(m_team, onChange, 1);
@@ -143,7 +136,6 @@ wxString NameAndNumberPersonalizer::Describe() const {
 void NameAndNumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, const Colorway& c, int side) const {
     const double k = art.m_width / m_product.artWidth;
     if (side == 1) {
-        // Team name across the chest, a smaller number under it.
         const PrintArea& ta = m_product.teamArea;
         const PrintArea& fn = m_product.frontNumberArea;
         const wxString team = TeamName();
@@ -175,9 +167,6 @@ void NameAndNumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble
                      white, c.trim, 2.5 * k);
 }
 
-// ---------------------------------------------------------------------------
-// Number only (shorts)
-// ---------------------------------------------------------------------------
 void NumberPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int)> onChange) {
     sizer->Add(Theme::MakeLabel(parent, L(wxT("背號（0–99）"), wxT("Number (0–99)")), 10, false, Theme::kMuted), 0, wxBOTTOM, parent->FromDIP(6));
     m_number = MakeNumberSpin(parent, 23);
@@ -198,9 +187,6 @@ void NumberPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, 
                      art.m_x + a.centerX * k, art.m_y + a.top * k, wxColour(255, 255, 255), c.trim, 3 * k);
 }
 
-// ---------------------------------------------------------------------------
-// Short text (tee, hoodie, backpack, towel; balls, cap, bands, bottle in 3D)
-// ---------------------------------------------------------------------------
 void TextPersonalizer::BuildControls(wxWindow* parent, wxSizer* sizer, std::function<void(int)> onChange) {
     sizer->Add(Theme::MakeLabel(parent, wxString::Format(L(wxT("最多 %d 字，中英文皆可"), wxT("Up to %d characters")), m_product.maxTextLength),
                                 10, false, Theme::kMuted),
@@ -225,7 +211,6 @@ void TextPersonalizer::Draw(wxGraphicsContext* gc, const wxRect2DDouble& art, co
     const PrintArea& a = m_product.textArea;
     wxFont font = FitFont(gc, text, NameFace(text), true, a.maxWidth * k, a.height * k);
     const double shrink = a.height * k - font.GetPixelSize().GetHeight();
-    // On a trim-coloured pocket or band the print takes the fabric colour.
     const bool onTrim = m_product.printOnTrim;
     DrawOutlinedText(gc, text, font, art.m_x + a.centerX * k, art.m_y + a.top * k + shrink / 2,
                      onTrim ? c.fabric : c.trim, onTrim ? c.trim : c.fabric, 1.5 * k);

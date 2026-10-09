@@ -5,11 +5,8 @@
 #include <vector>
 #include "Widgets.h"
 
-// Label for the header cart button on every page, e.g. "購物車  3 件｜NT$3,840".
 wxString CartButtonLabel();
 
-// Step 1: the cart. Items (with thumbnails) on the left, order summary with
-// coupon, free-shipping progress and checkout button on the right.
 class CartDialog : public wxDialog {
 public:
     explicit CartDialog(wxWindow* parent);
@@ -43,8 +40,6 @@ private:
     wxStaticText* m_total = nullptr;
 };
 
-// Step 2: shipping and payment. Each field is checked as soon as the user
-// leaves it (and live after that), with the message right under the field.
 class CheckoutDialog : public wxDialog {
 public:
     explicit CheckoutDialog(wxWindow* parent);
@@ -60,7 +55,7 @@ private:
     struct Field {
         wxTextCtrl* input;
         wxStaticText* error;
-        std::function<wxString()> check;  // message, or empty when valid
+        std::function<wxString()> check;
         bool touched = false;
     };
 
@@ -77,8 +72,6 @@ private:
     wxChoice* m_payment = nullptr;
 };
 
-// Orders placed since the app started: list on the left, the selected order's
-// items, totals and shipping details on the right.
 class OrdersDialog : public wxDialog {
 public:
     explicit OrdersDialog(wxWindow* parent);
@@ -89,8 +82,6 @@ private:
     wxPanel* m_detail = nullptr;
 };
 
-// Step 3: receipt with the order number. Reads the cart, so show it before
-// the cart is cleared.
 class OrderCompleteDialog : public wxDialog {
 public:
     OrderCompleteDialog(wxWindow* parent, const CheckoutDialog& info, const wxString& orderNumber);
