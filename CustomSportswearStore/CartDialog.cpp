@@ -23,6 +23,10 @@ namespace {
         return key == Catalog::kDeliveryStore ? L(wxT("超商取貨"), wxT("Store pickup")) : L(wxT("宅配到府"), wxT("Home delivery"));
     }
 
+    wxString PaymentLabel(const wxString& key) {
+        return key == Catalog::kPaymentTransfer ? L(wxT("ATM 轉帳"), wxT("Bank transfer")) : L(wxT("貨到付款"), wxT("Cash on delivery"));
+    }
+
     wxString MakeOrderNumber() {
         std::mt19937 rng(std::random_device{}());
         std::uniform_int_distribution<int> dist(0, 9999);
@@ -368,7 +372,7 @@ void CartDialog::OnCheckout() {
                        cart.Subtotal(), cart.Discount(), cart.ShippingFee(), cart.Total(),
                        cart.Discount() > 0 ? cart.AppliedCoupon()->code : wxString(),
                        checkout.RecipientName(), checkout.Phone(), checkout.DeliveryKey(),
-                       checkout.Address(), checkout.PaymentMethod() };
+                       checkout.Address(), checkout.PaymentKey() };
     OrderHistory::Get().Add(order);
 
     OrderCompleteDialog done(this, checkout, order.number);
@@ -521,8 +525,12 @@ wxString CheckoutDialog::DeliveryMethod() const {
     return DeliveryLabel(DeliveryKey());
 }
 
+wxString CheckoutDialog::PaymentKey() const {
+    return m_payment->GetSelection() == 1 ? Catalog::kPaymentTransfer : Catalog::kPaymentCod;
+}
+
 wxString CheckoutDialog::PaymentMethod() const {
-    return m_payment->GetStringSelection();
+    return PaymentLabel(PaymentKey());
 }
 
 void CheckoutDialog::OnDeliveryChanged() {
@@ -604,7 +612,7 @@ OrderCompleteDialog::OrderCompleteDialog(wxWindow* parent, const CheckoutDialog&
     if (!info.Email().IsEmpty()) addDetail(L(wxT("確認信"), wxT("Confirmation")), info.Email());
     body->Add(details, 0, wxTOP, FromDIP(18));
 
-    const wxString note = info.PaymentMethod() == L(wxT("ATM 轉帳"), wxT("Bank transfer"))
+    const wxString note = info.PaymentKey() == Catalog::kPaymentTransfer
         ? L(wxT("轉帳帳號會以簡訊傳送，請於 3 日內完成付款，確認入帳後出貨。"), wxT("We'll text you the account to pay into. Please pay within 3 days; we ship once it arrives."))
         : L(wxT("商品將於 3–5 個工作天內出貨，出貨時會以簡訊通知您。"), wxT("Ships in 3–5 working days; we'll text you when it's on its way."));
     body->Add(Theme::MakeLabel(card, note, 10, false, Theme::kMuted), 0, wxTOP, FromDIP(16));
@@ -762,7 +770,7 @@ void OrdersDialog::ShowOrder(long index) {
     row(L(wxT("收件人"), wxT("Recipient")), o.recipient + L(wxT("（"), wxT(" (")) + o.phone + L(wxT("）"), wxT(")")), Theme::kText);
     row(L(wxT("配送方式"), wxT("Delivery")), DeliveryLabel(o.delivery), Theme::kText);
     row(o.delivery == Catalog::kDeliveryStore ? L(wxT("取貨門市"), wxT("Pickup store")) : L(wxT("收件地址"), wxT("Address")), o.address, Theme::kText);
-    row(L(wxT("付款方式"), wxT("Payment")), o.payment, Theme::kText);
+    row(L(wxT("付款方式"), wxT("Payment")), PaymentLabel(o.payment), Theme::kText);
     m_detail->SetSizer(s, true);
     m_detail->Layout();
     m_detail->Thaw();

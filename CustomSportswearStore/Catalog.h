@@ -97,6 +97,8 @@ namespace Catalog {
     constexpr int kFreeShippingThreshold = 2000;
     inline const wxString kDeliveryHome = wxT("home");
     inline const wxString kDeliveryStore = wxT("store");
+    inline const wxString kPaymentCod = wxT("cod");
+    inline const wxString kPaymentTransfer = wxT("transfer");
 }
 
 struct CartItem {

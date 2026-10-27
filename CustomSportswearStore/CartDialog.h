@@ -50,6 +50,7 @@ public:
     wxString Address() const;
     wxString DeliveryKey() const;
     wxString DeliveryMethod() const;
+    wxString PaymentKey() const;
     wxString PaymentMethod() const;
 
 private:
