@@ -48,6 +48,7 @@ public:
     wxString Phone() const;
     wxString Email() const;
     wxString Address() const;
+    wxString DeliveryKey() const;
     wxString DeliveryMethod() const;
     wxString PaymentMethod() const;
 

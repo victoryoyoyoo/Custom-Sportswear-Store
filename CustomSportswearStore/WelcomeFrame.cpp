@@ -176,7 +176,7 @@ WelcomeFrame::WelcomeFrame()
     titleRow->Add(names, 0, wxALIGN_CENTER_VERTICAL);
     text->Add(titleRow);
 
-    text->Add(Theme::MakeLabel(panel, wxString::Format(L(wxT("%zu 項商品・%zu 款配色・360° 即時預覽"), wxT("%zu products · %zu colourways · live 360° preview")),
+    text->Add(Theme::MakeLabel(panel, wxString::Format(L(wxT("%zu 款商品・%zu 款配色・360° 即時預覽"), wxT("%zu products · %zu colourways · live 360° preview")),
                                                        Catalog::Products().size(), Catalog::Colorways().size()),
                                13, false, wxColour(222, 228, 240)),
               0, wxTOP, FromDIP(34));

@@ -1,17 +1,9 @@
 #include "Catalog.h"
 #include "Lang.h"
+#include "Theme.h"
 #include <algorithm>
 
 namespace {
-    wxString Money(int amount) {
-        wxString digits = wxString::Format(wxT("%d"), amount), out;
-        for (size_t i = 0; i < digits.length(); ++i) {
-            if (i > 0 && (digits.length() - i) % 3 == 0) out += wxT(',');
-            out += digits[i];
-        }
-        return wxT("NT$") + out;
-    }
-
     wxColour Hex(unsigned long v) { return wxColour((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF); }
 
     std::vector<SizeOption> ApparelSizes(const wxString& what, const int (&a)[5], const int (&b)[5], const wxString& bName) {
@@ -387,7 +379,7 @@ const std::vector<Coupon>& Coupons() {
     static std::vector<Coupon> table;
     static int builtFor = -1;
     return Localized(table, builtFor, [] { return std::vector<Coupon>{
-        { wxT("WELCOME100"), L(wxT("新朋友折 NT$100（滿 NT$1,000）"), wxT("NT$100 off your first order (over NT$1,000)")), 1000, 0, 100, 0 },
+        { wxT("WELCOME100"), L(wxT("滿 NT$1,000 折 NT$100"), wxT("NT$100 off orders over NT$1,000")), 1000, 0, 100, 0 },
         { wxT("TEAM10"),     L(wxT("團體訂購 9 折（5 件以上）"), wxT("Team order: 10% off (5 items or more)")),       0,    5, 0,   10 },
     }; });
 }
@@ -467,7 +459,7 @@ int ShoppingCart::Subtotal() const {
 
 wxString ShoppingCart::CouponProblem(const Coupon& c) const {
     if (Subtotal() < c.minSubtotal)
-        return L(wxT("商品金額需滿 "), wxT("Needs a subtotal of ")) + Money(c.minSubtotal);
+        return L(wxT("商品金額需滿 "), wxT("Needs a subtotal of ")) + Theme::FormatPrice(c.minSubtotal);
     if (TotalQuantity() < c.minItems)
         return wxString::Format(L(wxT("需購買 %d 件以上"), wxT("Needs %d or more items")), c.minItems);
     return wxString();

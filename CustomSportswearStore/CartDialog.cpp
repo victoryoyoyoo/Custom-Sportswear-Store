@@ -19,6 +19,10 @@ namespace {
         return { L(wxT("購物車"), wxT("Cart")), L(wxT("填寫資料"), wxT("Details")), L(wxT("完成訂購"), wxT("Done")) };
     }
 
+    wxString DeliveryLabel(const wxString& key) {
+        return key == Catalog::kDeliveryStore ? L(wxT("超商取貨"), wxT("Store pickup")) : L(wxT("宅配到府"), wxT("Home delivery"));
+    }
+
     wxString MakeOrderNumber() {
         std::mt19937 rng(std::random_device{}());
         std::uniform_int_distribution<int> dist(0, 9999);
@@ -363,7 +367,7 @@ void CartDialog::OnCheckout() {
     OrderRecord order{ MakeOrderNumber(), wxDateTime::Now(), cart.Items(),
                        cart.Subtotal(), cart.Discount(), cart.ShippingFee(), cart.Total(),
                        cart.Discount() > 0 ? cart.AppliedCoupon()->code : wxString(),
-                       checkout.RecipientName(), checkout.Phone(), checkout.DeliveryMethod(),
+                       checkout.RecipientName(), checkout.Phone(), checkout.DeliveryKey(),
                        checkout.Address(), checkout.PaymentMethod() };
     OrderHistory::Get().Add(order);
 
@@ -509,8 +513,12 @@ wxString CheckoutDialog::Phone() const { return Trimmed(m_fields[1].input); }
 wxString CheckoutDialog::Email() const { return Trimmed(m_fields[2].input); }
 wxString CheckoutDialog::Address() const { return Trimmed(m_fields[3].input); }
 
+wxString CheckoutDialog::DeliveryKey() const {
+    return m_storePickup->GetValue() ? Catalog::kDeliveryStore : Catalog::kDeliveryHome;
+}
+
 wxString CheckoutDialog::DeliveryMethod() const {
-    return m_storePickup->GetValue() ? L(wxT("超商取貨"), wxT("Store pickup")) : L(wxT("宅配到府"), wxT("Home delivery"));
+    return DeliveryLabel(DeliveryKey());
 }
 
 wxString CheckoutDialog::PaymentMethod() const {
@@ -588,7 +596,7 @@ OrderCompleteDialog::OrderCompleteDialog(wxWindow* parent, const CheckoutDialog&
         details->Add(Theme::MakeLabel(card, label, 10, false, Theme::kMuted));
         details->Add(Theme::MakeLabel(card, value, 10));
     };
-    const bool store = info.DeliveryMethod() == L(wxT("超商取貨"), wxT("Store pickup"));
+    const bool store = info.DeliveryKey() == Catalog::kDeliveryStore;
     addDetail(L(wxT("收件人"), wxT("Recipient")), info.RecipientName() + L(wxT("（"), wxT(" (")) + info.Phone() + L(wxT("）"), wxT(")")));
     addDetail(L(wxT("配送方式"), wxT("Delivery")), info.DeliveryMethod());
     addDetail(store ? L(wxT("取貨門市"), wxT("Pickup store")) : L(wxT("收件地址"), wxT("Address")), info.Address());
@@ -752,8 +760,8 @@ void OrdersDialog::ShowOrder(long index) {
 
     s->Add(new wxStaticLine(m_detail), 0, wxEXPAND | wxTOP | wxBOTTOM, FromDIP(10));
     row(L(wxT("收件人"), wxT("Recipient")), o.recipient + L(wxT("（"), wxT(" (")) + o.phone + L(wxT("）"), wxT(")")), Theme::kText);
-    row(L(wxT("配送方式"), wxT("Delivery")), o.delivery, Theme::kText);
-    row(o.delivery == L(wxT("超商取貨"), wxT("Store pickup")) ? L(wxT("取貨門市"), wxT("Pickup store")) : L(wxT("收件地址"), wxT("Address")), o.address, Theme::kText);
+    row(L(wxT("配送方式"), wxT("Delivery")), DeliveryLabel(o.delivery), Theme::kText);
+    row(o.delivery == Catalog::kDeliveryStore ? L(wxT("取貨門市"), wxT("Pickup store")) : L(wxT("收件地址"), wxT("Address")), o.address, Theme::kText);
     row(L(wxT("付款方式"), wxT("Payment")), o.payment, Theme::kText);
     m_detail->SetSizer(s, true);
     m_detail->Layout();

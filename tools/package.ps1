@@ -1,19 +1,8 @@
-﻿# Builds the Release exe and packs everything a user needs into one zip:
-#   dist\CustomSportswearStore-<version>-win64.zip
-#     CustomSportswearStore\CustomSportswearStore.exe
-#     CustomSportswearStore\assets\...
-#     CustomSportswearStore\msvcp140.dll, vcruntime140.dll, vcruntime140_1.dll
-#     CustomSportswearStore\README.txt
-#
-# Usage (from the repo root, in PowerShell):
-#   powershell -ExecutionPolicy Bypass -File tools\package.ps1 -Version v2.3.0
-
-param([string]$Version = "v2.3.0")
+﻿param([string]$Version = "v2.3.0")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-# Visual Studio + MSBuild
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
 $vs = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
 $msbuild = Join-Path $vs "MSBuild\Current\Bin\MSBuild.exe"
@@ -21,8 +10,6 @@ $msbuild = Join-Path $vs "MSBuild\Current\Bin\MSBuild.exe"
 & $msbuild CustomSportswearStore.sln /p:Configuration=Release /p:Platform=x64 /m /v:minimal /nologo
 if ($LASTEXITCODE -ne 0) { throw "Build failed" }
 
-# The C++ runtime DLLs may be shipped next to the exe (Microsoft's
-# "app-local" deployment), so the app runs without installing anything.
 $crt = Get-ChildItem (Join-Path $vs "VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT") | Sort-Object FullName | Select-Object -Last 1
 
 $out = Join-Path $root "dist\CustomSportswearStore"
@@ -52,16 +39,20 @@ $readme = @"
 - 本程式為課堂專題展示用途，不會實際收款或寄送商品。
 
 系統需求：Windows 10 / 11（64 位元）
-
-----
-Custom Sportswear Store $Version
-Unzip the whole folder anywhere and double-click CustomSportswearStore.exe.
-If Windows SmartScreen appears, choose "More info" > "Run anyway" (the app is not code-signed).
-Drag a product to turn it round; F11 toggles full screen. This is a demo: no payment or shipping happens.
-Requires 64-bit Windows 10 or 11.
 "@
 Set-Content -Path (Join-Path $out "README.txt") -Value $readme -Encoding UTF8
 
 $zip = Join-Path $root "dist\CustomSportswearStore-$Version-win64.zip"
-Compress-Archive -Path $out -DestinationPath $zip
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$distRoot = (Join-Path $root "dist") + "\"
+$archive = [System.IO.Compression.ZipFile]::Open($zip, "Create")
+try {
+    foreach ($file in Get-ChildItem $out -Recurse -File) {
+        $entry = $file.FullName.Substring($distRoot.Length).Replace("\", "/")
+        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $entry) | Out-Null
+    }
+}
+finally {
+    $archive.Dispose()
+}
 Write-Host "Packed $zip"

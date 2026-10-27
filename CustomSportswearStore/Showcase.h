@@ -38,7 +38,7 @@ std::unique_ptr<Model> Build(const Product& product, const Colorway& colorway,
 
 double PrintAngle(const Product& product, int side);
 
-void DrawStage(wxGraphicsContext* gc, const wxRect2DDouble& area, const wxColour& surround);
+void DrawStage(wxGraphicsContext* gc, const wxRect2DDouble& area);
 void DrawShadow(wxGraphicsContext* gc, const wxRect& productBounds, double strength = 1.0);
 
 wxBitmap Still(const Product& product, const Colorway& colorway, const wxSize& pixels, const wxColour& surround);

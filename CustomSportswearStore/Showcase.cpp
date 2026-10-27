@@ -774,14 +774,13 @@ double PrintAngle(const Product& product, int side) {
     }
 }
 
-void DrawStage(wxGraphicsContext* gc, const wxRect2DDouble& area, const wxColour& surround) {
+void DrawStage(wxGraphicsContext* gc, const wxRect2DDouble& area) {
     wxGraphicsGradientStops stops(wxColour(247, 248, 250), wxColour(232, 235, 240));
     stops.Add(wxColour(242, 244, 247), 0.55f);
     gc->SetBrush(gc->CreateLinearGradientBrush(area.m_x, area.m_y, area.m_x, area.m_y + area.m_height, stops));
     gc->SetPen(*wxTRANSPARENT_PEN);
     const double radius = std::min(area.m_width, area.m_height) * 0.035;
     gc->DrawRoundedRectangle(area.m_x, area.m_y, area.m_width, area.m_height, radius);
-    (void)surround;
 }
 
 void DrawShadow(wxGraphicsContext* gc, const wxRect& bounds, double strength) {
@@ -807,7 +806,7 @@ wxBitmap Still(const Product& product, const Colorway& colorway, const wxSize& p
     dc.Clear();
     std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
     if (gc) {
-        DrawStage(gc.get(), wxRect2DDouble(0, 0, pixels.x, pixels.y), surround);
+        DrawStage(gc.get(), wxRect2DDouble(0, 0, pixels.x, pixels.y));
         const Frame frame = Build(product, colorway, nullptr, pixels)->Render(0, pixels, true);
         DrawShadow(gc.get(), frame.bounds, 0.8);
         gc->DrawBitmap(wxBitmap(frame.image), 0, 0, pixels.x, pixels.y);
@@ -823,7 +822,7 @@ wxBitmap Tile(const Product& product, const wxSize& pixels, const wxColour& surr
     dc.Clear();
     std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
     if (gc) {
-        DrawStage(gc.get(), wxRect2DDouble(0, 0, pixels.x, pixels.y), surround);
+        DrawStage(gc.get(), wxRect2DDouble(0, 0, pixels.x, pixels.y));
         struct Pose { size_t index; double x, y, w, h, angle; };
         const bool ball = product.shape == Shape::Basketball || product.shape == Shape::SoccerBall;
         const Pose poses[2] = { { 0, 0.02, -0.02, 0.62, 0.84, ball ? 0.9 : -0.45 },

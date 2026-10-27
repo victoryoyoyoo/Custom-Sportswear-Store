@@ -172,7 +172,7 @@ void Turntable::OnPaint(wxPaintEvent&) {
     std::unique_ptr<wxGraphicsContext> gc(wxGraphicsContext::Create(dc));
     if (!gc || size.x < 16 || size.y < 16) return;
     gc->SetInterpolationQuality(wxINTERPOLATION_GOOD);
-    Showcase::DrawStage(gc.get(), wxRect2DDouble(0, 0, size.x, size.y), surround);
+    Showcase::DrawStage(gc.get(), wxRect2DDouble(0, 0, size.x, size.y));
 
     EnsureModel();
     if (m_model && m_frameStale) {
@@ -191,7 +191,7 @@ void Turntable::OnPaint(wxPaintEvent&) {
     }
     if (m_fadeLeft > 0 && m_fadeFrom.IsOk()) {
         gc->BeginLayer(m_fadeLeft);
-        Showcase::DrawStage(gc.get(), wxRect2DDouble(0, 0, size.x, size.y), surround);
+        Showcase::DrawStage(gc.get(), wxRect2DDouble(0, 0, size.x, size.y));
         gc->DrawBitmap(m_fadeFrom, 0, 0, size.x, size.y);
         gc->EndLayer();
     }

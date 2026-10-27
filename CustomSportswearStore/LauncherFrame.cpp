@@ -162,7 +162,7 @@ void LauncherFrame::ApplyFilter() {
     if (shown == 0)
         m_empty->SetLabel(m_favoritesOnly && query.IsEmpty() ? wxString(L(wxT("還沒有收藏的商品：點商品卡右下角的愛心加入收藏"), wxT("Nothing saved yet: tap the heart on a product card to save it")))
                                                               : wxString(L(wxT("找不到符合的商品，換個關鍵字試試"), wxT("No products match. Try another word."))));
-    wxString label = wxString::Format(L(wxT("%zu 類商品・%zu 款配色・可客製姓名與背號"), wxT("%zu products · %zu colourways")),
+    wxString label = wxString::Format(L(wxT("%zu 款商品・%zu 款配色・可客製姓名與背號"), wxT("%zu products · %zu colourways")),
                                       Catalog::Products().size(), Catalog::Colorways().size());
     if (m_favoritesOnly) label = Lang::English() ? wxT("Saved · ") + Plural(shown, wxT("product"), wxT("products"))
                                                   : wxString::Format(wxT("收藏・%d 項商品"), shown);
