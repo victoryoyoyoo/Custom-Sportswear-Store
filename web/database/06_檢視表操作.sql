@@ -4,7 +4,7 @@ GO
 -- 1. 查詢檢視表（ch10 範例 2）：跟查一般資料表一樣
 SELECT * FROM 熱銷商品前五名檢視;
 
-SELECT 姓名, 總金額
+SELECT 顧客編號, 總金額
 FROM 顧客RFM檢視
 WHERE 購買次數 >= 20
 ORDER BY 總金額 DESC;

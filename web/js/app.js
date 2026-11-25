@@ -108,7 +108,7 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 const customerSelect = $("customer");
 function fillCustomerSelect() {
   const keep = customerSelect.value || local.get("shop_customer", "C001");
-  customerSelect.innerHTML = db.customers.map((c) => `<option value="${c.id}">${c.id} ${esc(c.name)}</option>`).join("");
+  customerSelect.innerHTML = db.customers.map((c) => `<option value="${c.id}">${c.id}</option>`).join("");
   customerSelect.value = db.customers.some((c) => c.id === keep) ? keep : db.customers[0]?.id;
 }
 customerSelect.addEventListener("change", () => {
@@ -217,9 +217,8 @@ function scoreFor(owned) {
 function renderForYou() {
   const owned = new Set(db.orders.filter((o) => o.customer === me()).flatMap((o) => o.items.map((i) => i.product)));
   let list = scoreFor(owned).slice(0, 4);
-  const name = customerById(me())?.name || "";
   if (list.length) {
-    $("for-you-title").textContent = `${name} 可能會喜歡`;
+    $("for-you-title").textContent = "你可能會喜歡";
     $("for-you-note").textContent = "依這位顧客買過的商品，找出其他顧客常一起買的。";
   } else {
     const sold = soldCount();
@@ -332,7 +331,7 @@ function renderCart() {
   const lines = cartLines();
   const sub = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
   const ship = shippingOf(sub);
-  $("cart-customer").textContent = `${customerById(me())?.name || ""}（${me()}）`;
+  $("cart-customer").textContent = me();
   $("cart-body").innerHTML = lines.length
     ? lines.map((l) => `<tr>
         <td><div class="cart-item"><img src="${img(l.p.key, l.color)}" alt=""><div><span>${esc(l.p.name)}</span><small>${colorByKey[l.color]?.name || l.color}・${esc(l.size)}</small></div></div></td>
@@ -376,16 +375,16 @@ $("cart-clear").addEventListener("click", async () => {
 
 $("checkout").addEventListener("click", () => {
   const c = customerById(me());
+  const last = db.orders.filter((o) => o.customer === me() && o.address).at(-1);
   const lines = cartLines();
   const sub = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
   openDialog(`
     <form class="form" id="checkout-form" novalidate>
       <h2>填寫收件資料</h2>
       <div class="grid-form">
-        <label>收件人<input name="recipient" value="${esc(c?.name)}" required maxlength="20"></label>
         <label>手機<input name="phone" value="${esc(c?.phone)}" placeholder="0912-345-678" required></label>
         <label>縣市<select name="city">${CITIES.map((x) => `<option ${x === c?.city ? "selected" : ""}>${x}</option>`).join("")}</select></label>
-        <label>地址<input name="address" placeholder="路名、門牌號碼" required maxlength="60"></label>
+        <label>地址<input name="address" value="${esc(last?.address || "")}" placeholder="路名、門牌號碼" required maxlength="60"></label>
       </div>
       <fieldset class="pay"><legend>付款方式</legend>
         ${["信用卡", "貨到付款", "ATM 轉帳"].map((x, i) => `<label><input type="radio" name="payment" value="${x}" ${i === 0 ? "checked" : ""}>${x}</label>`).join("")}
@@ -405,9 +404,9 @@ async function submitOrder(e) {
   e.preventDefault();
   const f = e.target;
   const data = Object.fromEntries(new FormData(f));
-  const bad = { recipient: !data.recipient.trim(), phone: !PHONE.test(data.phone.trim()), address: data.address.trim().length < 5 };
+  const bad = { phone: !PHONE.test(data.phone.trim()), address: data.address.trim().length < 5 };
   Object.entries(bad).forEach(([k, v]) => f[k].classList.toggle("bad", v));
-  const errs = [bad.recipient && "收件人", bad.phone && "手機格式（例如 0912-345-678）", bad.address && "地址"].filter(Boolean);
+  const errs = [bad.phone && "手機格式（例如 0912-345-678）", bad.address && "地址"].filter(Boolean);
   if (errs.length) {
     $("form-msg").textContent = `請確認：${errs.join("、")}`;
     return;
@@ -415,7 +414,7 @@ async function submitOrder(e) {
   const lines = cartLines();
   try {
     const order = await Store.createOrder({
-      customer: me(), payment: data.payment, recipient: data.recipient.trim(), phone: data.phone.trim(), city: data.city,
+      customer: me(), payment: data.payment, phone: data.phone.trim(), city: data.city,
       address: data.address.trim(), note: data.note.trim(),
       items: lines.map((l) => ({ product: l.p.id, color: l.color, size: l.size, qty: l.qty, price: l.p.price })),
     });
@@ -459,7 +458,7 @@ function renderOrders() {
 function filteredOrders() {
   const q = $("o-search").value.trim();
   const st = $("o-status").value;
-  return db.orders.filter((o) => (!st || o.status === st) && (!q || o.id.includes(q.toUpperCase()) || o.customer.includes(q.toUpperCase()) || (customerById(o.customer)?.name || "").includes(q)));
+  return db.orders.filter((o) => (!st || o.status === st) && (!q || o.id.includes(q.toUpperCase()) || o.customer.includes(q.toUpperCase())));
 }
 
 function renderOrderTable() {
@@ -470,7 +469,7 @@ function renderOrderTable() {
   $("o-body").innerHTML = list.length
     ? list.slice(orderPage * per, orderPage * per + per).map((o) => `
       <tr class="clickable" data-order="${o.id}" tabindex="0">
-        <td>${o.id}</td><td>${o.date}</td><td>${esc(customerById(o.customer)?.name || o.customer)}</td>
+        <td>${o.id}</td><td>${o.date}</td><td>${o.customer}</td>
         <td class="ellipsis">${o.items.map((i) => `${esc(productById(i.product)?.name || i.product)} ×${i.qty}`).join("、")}</td>
         <td class="num">${money(orderTotal(o))}</td><td><span class="status s${STATUSES.indexOf(o.status)}">${o.status}</span></td>
       </tr>`).join("")
@@ -493,8 +492,7 @@ $("o-body").addEventListener("keydown", (e) => {
 $("side-switch").addEventListener("click", () => showTab(document.body.dataset.side === "front" ? "orders" : "shop"));
 
 function renderMine() {
-  const name = customerById(me())?.name || "";
-  $("mine-title").textContent = `${name} 的訂單`;
+  $("mine-title").textContent = `${me()} 的訂單`;
   const list = db.orders.filter((o) => o.customer === me());
   $("mine-body").innerHTML = list.length
     ? list.map((o) => `
@@ -518,13 +516,12 @@ function openOrder(id) {
   const o = db.orders.find((x) => x.id === id);
   if (!o) return;
   const sub = orderTotal(o);
-  const c = customerById(o.customer);
   openDialog(`
     <div class="order-detail">
       <h2>訂單 ${o.id}</h2>
       <dl class="kv">
-        <dt>日期</dt><dd>${o.date}</dd><dt>顧客</dt><dd>${esc(c?.name || "")}（${o.customer}）</dd>
-        <dt>收件人</dt><dd>${esc(o.recipient)}${o.phone ? `，${esc(o.phone)}` : ""}</dd><dt>地址</dt><dd>${esc(o.city)}${esc(o.address || "")}</dd>
+        <dt>日期</dt><dd>${o.date}</dd><dt>顧客</dt><dd>${o.customer}</dd>
+        <dt>收件電話</dt><dd>${esc(o.phone || "")}</dd><dt>地址</dt><dd>${esc(o.city)}${esc(o.address || "")}</dd>
         <dt>付款</dt><dd>${esc(o.payment)}</dd>${o.note ? `<dt>備註</dt><dd>${esc(o.note)}</dd>` : ""}
       </dl>
       <table class="table"><thead><tr><th>商品</th><th>顏色／尺寸</th><th class="num">單價</th><th class="num">數量</th><th class="num">小計</th></tr></thead><tbody>
@@ -591,9 +588,9 @@ function localView(name) {
   if (name === "熱銷商品前五名檢視") return { columns: ["商品編號", "商品名稱", "分類名稱", "銷售件數"], rows: [...sales].sort((a, b) => b[3] - a[3]).slice(0, 5).map((r) => r.slice(0, 4)) };
   if (name === "商品銷售檢視") return { columns: ["商品編號", "商品名稱", "分類名稱", "銷售件數", "銷售金額"], rows: [...sales].sort((a, b) => b[4] - a[4]) };
   if (name === "顧客RFM檢視") {
-    return { columns: ["顧客編號", "姓名", "最近購買天數", "購買次數", "總金額", "平均金額"], rows: state.profiles.map((p) => [p.id, customerById(p.id)?.name || "", p.recency, p.frequency, p.monetary, Math.round(p.average)]).sort((a, b) => b[4] - a[4]).slice(0, 20) };
+    return { columns: ["顧客編號", "最近購買天數", "購買次數", "總金額", "平均金額"], rows: state.profiles.map((p) => [p.id, p.recency, p.frequency, p.monetary, Math.round(p.average)]).sort((a, b) => b[3] - a[3]).slice(0, 20) };
   }
-  if (name === "顧客公開資料檢視") return { columns: ["顧客編號", "姓名", "縣市", "加入日期"], rows: [...db.customers].sort((a, b) => a.id.localeCompare(b.id)).slice(0, 20).map((c) => [c.id, c.name, c.city, c.joined]) };
+  if (name === "顧客公開資料檢視") return { columns: ["顧客編號", "縣市", "加入日期"], rows: [...db.customers].sort((a, b) => a.id.localeCompare(b.id)).slice(0, 20).map((c) => [c.id, c.city, c.joined]) };
   return {
     columns: ["訂單編號", "顧客編號", "訂購日期", "狀態", "小計", "件數"],
     rows: [...db.orders].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id.localeCompare(a.id))).slice(0, 20).map((o) => [o.id, o.customer, o.date, o.status, orderTotal(o), o.items.reduce((s, i) => s + i.qty, 0)]),
@@ -632,13 +629,13 @@ function renderAdmin() {
   const q = $("c-search").value.trim();
   const orderCount = {};
   db.orders.forEach((o) => (orderCount[o.customer] = (orderCount[o.customer] || 0) + 1));
-  const list = db.customers.filter((c) => !q || c.id.includes(q.toUpperCase()) || c.name.includes(q) || c.email.includes(q) || c.city.includes(q));
+  const list = db.customers.filter((c) => !q || c.id.includes(q.toUpperCase()) || c.email.includes(q) || c.city.includes(q));
   const per = 12;
   const pages = Math.max(1, Math.ceil(list.length / per));
   custPage = Math.min(custPage, pages - 1);
   $("c-body").innerHTML = list.slice(custPage * per, custPage * per + per).map((c) => `
-    <tr><td>${c.id}</td><td>${esc(c.name)}</td><td>${esc(c.email)}</td><td class="nowrap">${esc(c.phone)}</td><td>${esc(c.city)}</td><td class="nowrap">${c.joined}</td><td class="num">${orderCount[c.id] || 0}</td>
-    <td class="num nowrap"><button class="icon-btn" data-edit-c="${c.id}">編輯</button><button class="icon-btn danger-text" data-del-c="${c.id}">刪除</button></td></tr>`).join("") || `<tr><td colspan="8" class="empty">沒有符合的顧客。</td></tr>`;
+    <tr><td>${c.id}</td><td>${esc(c.email)}</td><td class="nowrap">${esc(c.phone)}</td><td>${esc(c.city)}</td><td class="nowrap">${c.joined}</td><td class="num">${orderCount[c.id] || 0}</td>
+    <td class="num nowrap"><button class="icon-btn" data-edit-c="${c.id}">編輯</button><button class="icon-btn danger-text" data-del-c="${c.id}">刪除</button></td></tr>`).join("") || `<tr><td colspan="7" class="empty">沒有符合的顧客。</td></tr>`;
   $("c-page").textContent = `${custPage + 1} / ${pages}（共 ${list.length} 位）`;
   $("c-prev").disabled = custPage === 0;
   $("c-next").disabled = custPage >= pages - 1;
@@ -688,12 +685,11 @@ function productForm(p) {
 
 function customerForm(c) {
   const isNew = !c;
-  c = c || { name: "", email: "", phone: "", city: "台北市" };
+  c = c || { email: "", phone: "", city: "台北市" };
   openDialog(`
     <form class="form" id="c-form" novalidate>
       <h2>${isNew ? "新增顧客" : `編輯顧客 ${c.id}`}</h2>
       <div class="grid-form">
-        <label>姓名<input name="name" value="${esc(c.name)}" required maxlength="20"></label>
         <label>Email<input name="email" type="email" value="${esc(c.email)}" required maxlength="60"></label>
         <label>手機<input name="phone" value="${esc(c.phone)}" placeholder="0912-345-678" required></label>
         <label>縣市<select name="city">${CITIES.map((x) => `<option ${x === c.city ? "selected" : ""}>${x}</option>`).join("")}</select></label>
@@ -706,7 +702,6 @@ function customerForm(c) {
     e.preventDefault();
     const d = Object.fromEntries(new FormData(e.target));
     const errs = [];
-    if (!d.name.trim()) errs.push("姓名");
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email.trim())) errs.push("Email 格式");
     if (!PHONE.test(d.phone.trim())) errs.push("手機格式");
     if (errs.length) {
@@ -714,7 +709,7 @@ function customerForm(c) {
       return;
     }
     try {
-      const saved = await Store.saveCustomer({ ...c, name: d.name.trim(), email: d.email.trim(), phone: d.phone.trim(), city: d.city });
+      const saved = await Store.saveCustomer({ ...c, email: d.email.trim(), phone: d.phone.trim(), city: d.city });
       await reload();
       fillCustomerSelect();
       closeDialog();
@@ -740,7 +735,7 @@ $("admin").addEventListener("click", async (e) => {
       renderAdmin();
       toast("已刪除商品");
     }
-    if (t.dataset.delC && (await confirmBox(`確定要刪除顧客 ${t.dataset.delC}「${customerById(t.dataset.delC)?.name}」？`, "刪除"))) {
+    if (t.dataset.delC && (await confirmBox(`確定要刪除顧客 ${t.dataset.delC}？`, "刪除"))) {
       await Store.deleteCustomer(t.dataset.delC);
       await reload();
       fillCustomerSelect();
@@ -821,7 +816,7 @@ function shopSource() {
     similarity: state.similarity,
     money,
     topK: 3,
-    label: (id) => `${customerById(id)?.name || ""}（${id}）`,
+    label: (id) => id,
     me: me(),
     cutoff,
     churnRows() {
@@ -955,7 +950,7 @@ function renderSegments() {
   Charts.line($("elbow-chart"), cl.elbow.map((e) => e.k), [{ label: "組內距離平方和", values: cl.elbow.map((e) => e.inertia), color: "a" }], { xLabel: "K", marker: k });
   $("seg-table").innerHTML = `<thead><tr><th>群組</th><th class="num">人數</th><th class="num">最近購買</th><th class="num">次數</th><th class="num">總金額</th><th>建議做法</th></tr></thead><tbody>${cl.order.map((g, r) => `
     <tr><td class="nowrap"><i class="swatch" style="background:${cssVar(GROUP_COLORS[r])}"></i>${g.name}</td><td class="num">${g.size.toLocaleString("en-US")}</td><td class="num">${Math.round(g.recency)} 天前</td><td class="num">${g.frequency.toFixed(1)}</td><td class="num">${src.money(g.monetary)}</td><td>${ACTIONS[g.base]}</td></tr>`).join("")}</tbody>`;
-  $("seg-me").textContent = src.kind === "real" ? "" : mine >= 0 ? `${customerById(me())?.name}（${me()}）屬於「${cl.groups[cl.labels[mine]].name}」` : `${me()} 還沒有購買紀錄`;
+  $("seg-me").textContent = src.kind === "real" ? "" : mine >= 0 ? `${me()} 屬於「${cl.groups[cl.labels[mine]].name}」` : `${me()} 還沒有購買紀錄`;
 }
 
 ["k-select", "seg-view"].forEach((id) => $(id).addEventListener("change", () => { drawn.segments = false; renderSegments(); }));
@@ -1088,7 +1083,7 @@ function renderChurn() {
   const risky = cm.now.filter((x) => x.p.recency >= 14 && x.p.recency <= 120).sort((a, b) => b.prob - a.prob).slice(0, 10);
   $("ch-list").innerHTML = risky.map((x) => `<tr${src.me && x.p.id === src.me ? ' class="me"' : ""}><td>${esc(src.label(x.p.id))}</td><td class="num">${x.p.recency} 天前</td><td class="num">${x.p.frequency}</td><td class="num">${src.money(x.p.monetary)}</td><td class="num"><b>${pct(x.prob)}</b></td></tr>`).join("");
   const mine = src.me ? cm.now.find((x) => x.p.id === src.me) : null;
-  $("ch-me").textContent = mine ? `${customerById(me())?.name} 的流失機率：${pct(mine.prob)}` : "";
+  $("ch-me").textContent = mine ? `${me()} 的流失機率：${pct(mine.prob)}` : "";
 }
 
 (async () => {

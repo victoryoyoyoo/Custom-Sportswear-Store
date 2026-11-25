@@ -34,11 +34,11 @@ parts += batches("商品", ["商品編號", "商品名稱", "分類編號", "定
                  [[q(p["product_id"]), q(p["name"]), str(cat_id[p["category"]]), p["price"], q(p["key"]), q(p["description"]), "1" if p["active"] in ("1", "True", "true") else "0"] for p in products])
 parts += batches("商品尺寸", ["商品編號", "尺寸", "排序"],
                  [[q(p["product_id"]), q(s), str(i + 1)] for p in products for i, s in enumerate(p["sizes"].split("/"))])
-parts += batches("顧客", ["顧客編號", "姓名", "電子郵件", "手機", "縣市", "加入日期"],
-                 [[q(c["customer_id"]), q(c["name"]), q(c["email"]), q(c["phone"]), q(c["city"]), q(c["joined"])] for c in read("customers.csv")])
+parts += batches("顧客", ["顧客編號", "電子郵件", "手機", "縣市", "加入日期"],
+                 [[q(c["customer_id"]), q(c["email"]), q(c["phone"]), q(c["city"]), q(c["joined"])] for c in read("customers.csv")])
 nul = lambda v: q(v) if v else "NULL"
-parts += batches("訂單", ["訂單編號", "顧客編號", "訂購日期", "狀態", "付款方式", "收件人", "收件電話", "收件縣市", "收件地址", "備註"],
-                 [[q(o["order_id"]), q(o["customer_id"]), q(o["date"]), q(o["status"]), q(o["payment"]), q(o["recipient"]), nul(o["phone"]), q(o["city"]), nul(o["address"]), nul(o["note"])] for o in read("orders.csv")])
+parts += batches("訂單", ["訂單編號", "顧客編號", "訂購日期", "狀態", "付款方式", "收件電話", "收件縣市", "收件地址", "備註"],
+                 [[q(o["order_id"]), q(o["customer_id"]), q(o["date"]), q(o["status"]), q(o["payment"]), nul(o["phone"]), q(o["city"]), nul(o["address"]), nul(o["note"])] for o in read("orders.csv")])
 items = [[q(it["order_id"]), it["line"], q(it["product_id"]), q(it["color"]), q(it["size"]), it["qty"], it["price"]] for it in read("order_items.csv")]
 parts += batches("訂單明細", ["訂單編號", "項次", "商品編號", "顏色代碼", "尺寸", "數量", "成交單價"], items)
 parts.append("GO")

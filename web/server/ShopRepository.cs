@@ -51,9 +51,9 @@ public class ShopRepository(string connectionString)
             }
 
         var customers = new List<Customer>();
-        await using (var r = await Command(conn, "SELECT 顧客編號, 姓名, 電子郵件, 手機, 縣市, 加入日期 FROM 顧客 ORDER BY 顧客編號").ExecuteReaderAsync())
+        await using (var r = await Command(conn, "SELECT 顧客編號, 電子郵件, 手機, 縣市, 加入日期 FROM 顧客 ORDER BY 顧客編號").ExecuteReaderAsync())
             while (await r.ReadAsync())
-                customers.Add(new Customer(r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4), r.GetDateTime(5).ToString("yyyy-MM-dd")));
+                customers.Add(new Customer(r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetDateTime(4).ToString("yyyy-MM-dd")));
 
         var items = new Dictionary<string, List<OrderItem>>();
         await using (var r = await Command(conn, "SELECT 訂單編號, 商品編號, 顏色代碼, 尺寸, 數量, 成交單價 FROM 訂單明細 ORDER BY 訂單編號, 項次").ExecuteReaderAsync())
@@ -65,14 +65,14 @@ public class ShopRepository(string connectionString)
             }
 
         var orders = new List<Order>();
-        const string orderSql = "SELECT 訂單編號, 顧客編號, 訂購日期, 狀態, 付款方式, 收件人, 收件電話, 收件縣市, 收件地址, 備註 FROM 訂單";
+        const string orderSql = "SELECT 訂單編號, 顧客編號, 訂購日期, 狀態, 付款方式, 收件電話, 收件縣市, 收件地址, 備註 FROM 訂單";
         await using (var r = await Command(conn, orderSql).ExecuteReaderAsync())
             while (await r.ReadAsync())
             {
                 var id = r.GetString(0);
                 string? Text(int i) => r.IsDBNull(i) ? null : r.GetString(i);
-                orders.Add(new Order(id, r.GetString(1), r.GetDateTime(2).ToString("yyyy-MM-dd"), r.GetString(3), r.GetString(4), r.GetString(5),
-                    Text(6), r.GetString(7), Text(8), Text(9), items.GetValueOrDefault(id, [])));
+                orders.Add(new Order(id, r.GetString(1), r.GetDateTime(2).ToString("yyyy-MM-dd"), r.GetString(3), r.GetString(4),
+                    Text(5), r.GetString(6), Text(7), Text(8), items.GetValueOrDefault(id, [])));
             }
 
         return new { products, customers, orders };
@@ -140,7 +140,6 @@ public class ShopRepository(string connectionString)
 
     public async Task<Customer> SaveCustomerAsync(CustomerInput c)
     {
-        if (string.IsNullOrWhiteSpace(c.Name)) throw new ShopException("請填姓名。");
         if (!c.Email.Contains('@')) throw new ShopException("Email 格式不對。");
         if (!PhonePattern.IsMatch(c.Phone)) throw new ShopException("手機格式不對。");
         await using var conn = await OpenAsync();
@@ -152,18 +151,18 @@ public class ShopRepository(string connectionString)
         if (id is null)
         {
             id = NextId(conn, tx, "顧客", "顧客編號", "C", 3);
-            await Command(conn, "INSERT INTO 顧客 (顧客編號, 姓名, 電子郵件, 手機, 縣市) VALUES (@顧客編號, @姓名, @電子郵件, @手機, @縣市)", tx,
-                ("@顧客編號", id), ("@姓名", c.Name), ("@電子郵件", c.Email), ("@手機", c.Phone), ("@縣市", c.City)).ExecuteNonQueryAsync();
+            await Command(conn, "INSERT INTO 顧客 (顧客編號, 電子郵件, 手機, 縣市) VALUES (@顧客編號, @電子郵件, @手機, @縣市)", tx,
+                ("@顧客編號", id), ("@電子郵件", c.Email), ("@手機", c.Phone), ("@縣市", c.City)).ExecuteNonQueryAsync();
         }
         else
         {
-            var rows = await Command(conn, "UPDATE 顧客 SET 姓名 = @姓名, 電子郵件 = @電子郵件, 手機 = @手機, 縣市 = @縣市 WHERE 顧客編號 = @顧客編號", tx,
-                ("@顧客編號", id), ("@姓名", c.Name), ("@電子郵件", c.Email), ("@手機", c.Phone), ("@縣市", c.City)).ExecuteNonQueryAsync();
+            var rows = await Command(conn, "UPDATE 顧客 SET 電子郵件 = @電子郵件, 手機 = @手機, 縣市 = @縣市 WHERE 顧客編號 = @顧客編號", tx,
+                ("@顧客編號", id), ("@電子郵件", c.Email), ("@手機", c.Phone), ("@縣市", c.City)).ExecuteNonQueryAsync();
             if (rows == 0) throw new ShopException("找不到這位顧客。");
         }
         var joined = ((DateTime)(await Command(conn, "SELECT 加入日期 FROM 顧客 WHERE 顧客編號 = @顧客編號", tx, ("@顧客編號", id)).ExecuteScalarAsync())!).ToString("yyyy-MM-dd");
         await tx.CommitAsync();
-        return new Customer(id, c.Name, c.Email, c.Phone, c.City, joined);
+        return new Customer(id, c.Email, c.Phone, c.City, joined);
     }
 
     public async Task DeleteCustomerAsync(string id)
@@ -185,11 +184,11 @@ public class ShopRepository(string connectionString)
         var id = NextId(conn, tx, "訂單", "訂單編號", "O", 5);
         var today = DateTime.Today;
         const string insertOrder = """
-            INSERT INTO 訂單 (訂單編號, 顧客編號, 訂購日期, 狀態, 付款方式, 收件人, 收件電話, 收件縣市, 收件地址, 備註)
-            VALUES (@訂單編號, @顧客編號, @訂購日期, N'已成立', @付款方式, @收件人, @收件電話, @收件縣市, @收件地址, @備註)
+            INSERT INTO 訂單 (訂單編號, 顧客編號, 訂購日期, 狀態, 付款方式, 收件電話, 收件縣市, 收件地址, 備註)
+            VALUES (@訂單編號, @顧客編號, @訂購日期, N'已成立', @付款方式, @收件電話, @收件縣市, @收件地址, @備註)
             """;
         await Command(conn, insertOrder, tx, ("@訂單編號", id), ("@顧客編號", o.Customer), ("@訂購日期", today), ("@付款方式", o.Payment),
-            ("@收件人", o.Recipient), ("@收件電話", o.Phone), ("@收件縣市", o.City), ("@收件地址", o.Address), ("@備註", o.Note)).ExecuteNonQueryAsync();
+            ("@收件電話", o.Phone), ("@收件縣市", o.City), ("@收件地址", o.Address), ("@備註", o.Note)).ExecuteNonQueryAsync();
         var items = new List<OrderItem>();
         for (var i = 0; i < o.Items.Count; i++)
         {
@@ -205,7 +204,7 @@ public class ShopRepository(string connectionString)
             items.Add(it with { Price = (int)price });
         }
         await tx.CommitAsync();
-        return new Order(id, o.Customer, today.ToString("yyyy-MM-dd"), "已成立", o.Payment, o.Recipient, o.Phone, o.City, o.Address, o.Note, items);
+        return new Order(id, o.Customer, today.ToString("yyyy-MM-dd"), "已成立", o.Payment, o.Phone, o.City, o.Address, o.Note, items);
     }
 
     public async Task UpdateOrderStatusAsync(string id, string status)

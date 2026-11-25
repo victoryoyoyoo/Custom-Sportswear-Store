@@ -51,9 +51,9 @@ TYPES = {
     "slow": {"share": 0.12, "gap": 85, "items": (2, 3), "premium": 0.9},
 }
 
-SURNAMES = list("陳林黃張李王吳劉蔡楊許鄭謝郭洪曾邱廖賴周徐蘇葉莊呂江何蕭羅高")
-FIRST = list("子宇承柏品欣家冠宥雅俊思佳育詠志書嘉博彥浩怡晨依語宏建凱哲婉美郁筱芷庭昱")
-SECOND = list("恩翰妤豪廷辰婷傑穎蓉誠晴明瑋玲涵軒安琪萱華倫儒蓁璇維賢瑜潔儀妍君霖祥銘翔")
+STREETS = ["中山路", "中正路", "民生路", "民權路", "民族路", "復興路", "建國路", "和平路", "信義路", "仁愛路",
+           "光復路", "自由路", "成功路", "忠孝路", "公園路", "文化路", "大同路", "中華路", "三民路", "五福路",
+           "博愛路", "長安路", "南京路", "林森路", "興中路", "健康路", "永福路", "大學路", "府前路", "青年路"]
 CITIES = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "新竹市", "基隆市", "嘉義市", "宜蘭縣"]
 PAYMENTS = ["信用卡", "貨到付款", "ATM 轉帳"]
 
@@ -64,7 +64,7 @@ order_no = 1
 n_customers = 400
 type_names = list(TYPES)
 shares = [TYPES[t]["share"] for t in type_names]
-used_names = set()
+used_addresses = set()
 
 for c in range(n_customers):
     kind = rng.choice(type_names, p=shares)
@@ -72,11 +72,11 @@ for c in range(n_customers):
     theme = str(rng.choice(list(THEMES), p=[0.45, 0.35, 0.2]))
     cid = f"C{c + 1:03d}"
     while True:
-        surname = rng.choice(SURNAMES)
-        first, second = rng.choice(len(FIRST), size=2)
-        name = surname + FIRST[first] + SECOND[second]
-        if name not in used_names:
-            used_names.add(name)
+        street = rng.choice(STREETS)
+        lane, number = rng.choice(36, size=2)
+        address = f"{street}{lane + 1}巷{number + 1}號"
+        if address not in used_addresses:
+            used_addresses.add(address)
             break
     city = str(rng.choice(CITIES))
     fav = [COLORS[i][0] for i in rng.choice(len(COLORS), size=3, replace=False)]
@@ -85,7 +85,7 @@ for c in range(n_customers):
     day = int(rng.integers(150, 290)) if kind == "oneoff" else int(rng.integers(0, 120))
     joined = START + timedelta(days=max(0, day - int(rng.integers(0, 30))))
     customers.append({
-        "id": cid, "name": str(name), "email": f"user{c + 1:03d}@example.com",
+        "id": cid, "email": f"user{c + 1:03d}@example.com",
         "phone": f"09{rng.integers(10, 99)}-{rng.integers(100, 999)}-{rng.integers(100, 999)}",
         "city": city, "joined": joined.isoformat(),
     })
@@ -109,7 +109,7 @@ for c in range(n_customers):
         if order_no % 67 == 0:
             status = "已取消"
         orders.append({"id": oid, "customer": cid, "date": when.isoformat(), "status": status,
-                       "payment": str(rng.choice(PAYMENTS, p=[0.55, 0.3, 0.15])), "recipient": str(name), "city": city})
+                       "payment": str(rng.choice(PAYMENTS, p=[0.55, 0.3, 0.15])), "city": city, "address": address})
         for pid in picked:
             p = PRODUCTS[INDEX[pid]]
             size = apparel if p[5] is APPAREL else shoe if p[5] is SHOES else str(rng.choice(p[5]))
@@ -141,9 +141,9 @@ phones = {c["id"]: c["phone"] for c in customers}
 write_csv("colors.csv", ["color_key", "name", "hex"], COLORS)
 write_csv("products.csv", ["product_id", "key", "name", "category", "price", "sizes", "description", "active"],
           [[p[0], p[1], p[2], p[3], p[4], "/".join(p[5]), p[6], 1] for p in PRODUCTS])
-write_csv("customers.csv", ["customer_id", "name", "email", "phone", "city", "joined"], [list(c.values()) for c in customers])
-write_csv("orders.csv", ["order_id", "customer_id", "date", "status", "payment", "recipient", "phone", "city", "address", "note"],
-          [[o["id"], o["customer"], o["date"], o["status"], o["payment"], o["recipient"], phones[o["customer"]], o["city"], "", ""] for o in orders])
+write_csv("customers.csv", ["customer_id", "email", "phone", "city", "joined"], [list(c.values()) for c in customers])
+write_csv("orders.csv", ["order_id", "customer_id", "date", "status", "payment", "phone", "city", "address", "note"],
+          [[o["id"], o["customer"], o["date"], o["status"], o["payment"], phones[o["customer"]], o["city"], o["address"], ""] for o in orders])
 write_csv("order_items.csv", ["order_id", "line", "product_id", "color", "size", "qty", "price"],
           [[l[0], n, *l[1:]] for l, n in zip(lines, line_numbers(lines))])
 

@@ -26,8 +26,8 @@ const Store = (() => {
       if (!items.has(order)) items.set(order, []);
       items.get(order).push({ product, color, size, qty, price });
     });
-    return ORDERS.map(([id, customer, date, status, payment, recipient, phone, city, address, note]) => ({
-      id, customer, date, status, payment, recipient, phone, city, address, note, items: items.get(id) || [],
+    return ORDERS.map(([id, customer, date, status, payment, phone, city, address, note]) => ({
+      id, customer, date, status, payment, phone, city, address, note, items: items.get(id) || [],
     }));
   };
 

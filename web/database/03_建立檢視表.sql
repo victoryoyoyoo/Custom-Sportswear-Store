@@ -13,14 +13,14 @@ GO
 
 -- 顧客分群用的 RFM：最近購買、購買次數、總金額
 CREATE OR ALTER VIEW 顧客RFM檢視 AS
-SELECT 顧客.顧客編號, 顧客.姓名,
+SELECT 顧客.顧客編號,
        DATEDIFF(DAY, MAX(訂單金額檢視.訂購日期), CAST(GETDATE() AS DATE)) AS 最近購買天數,
        COUNT(訂單金額檢視.訂單編號) AS 購買次數,
        SUM(訂單金額檢視.小計) AS 總金額,
        AVG(CAST(訂單金額檢視.小計 AS FLOAT)) AS 平均金額
 FROM 顧客
 JOIN 訂單金額檢視 ON 訂單金額檢視.顧客編號 = 顧客.顧客編號 AND 訂單金額檢視.狀態 <> N'已取消'
-GROUP BY 顧客.顧客編號, 顧客.姓名;
+GROUP BY 顧客.顧客編號;
 GO
 
 -- 每個商品賣了多少（沒賣過的也列出來）
@@ -37,7 +37,7 @@ GO
 
 -- 隱藏個資的顧客檢視表：給客服看，不顯示電子郵件和手機（ch10 隱藏欄位）
 CREATE OR ALTER VIEW 顧客公開資料檢視 AS
-SELECT 顧客編號, 姓名, 縣市, 加入日期
+SELECT 顧客編號, 縣市, 加入日期
 FROM 顧客;
 GO
 

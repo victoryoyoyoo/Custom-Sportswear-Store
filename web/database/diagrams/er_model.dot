@@ -17,10 +17,10 @@ graph ER {
   BelongsTo [label="屬於", pos="10,1.8!"];
 
   node [shape=ellipse, style="", color="#5B6270", fontsize=12, width=0.9, height=0.4];
-  c_id [label=<<U>顧客編號</U>>, pos="-1.6,5.8!"]; c_name [label="姓名", pos="-0.2,6.2!"]; c_mail [label="電子郵件", pos="1.2,6!"];
+  c_id [label=<<U>顧客編號</U>>, pos="-1.6,5.8!"]; c_mail [label="電子郵件", pos="1.2,6!"];
   c_phone [label="手機", pos="-2,4.5!"]; c_city [label="縣市", pos="-2,3.4!"]; c_join [label="加入日期", pos="-1.3,2.3!"];
   o_id [label=<<U>訂單編號</U>>, pos="3.6,6!"]; o_date [label="訂購日期", pos="5,6.3!"]; o_status [label="狀態", pos="6.3,6!"];
-  o_pay [label="付款方式", pos="3,2.4!"]; o_rec [label="收件人", pos="4.2,1.8!"]; o_note [label="備註", pos="5.3,1.5!"];
+  o_pay [label="付款方式", pos="3,2.4!"]; o_note [label="備註", pos="5.3,1.5!"];
   o_addr [label="收件地址", pos="7,5.6!"]; o_addr_city [label="縣市", pos="7.2,6.8!"]; o_addr_line [label="地址", pos="8.4,6.4!"]; o_phone [label="收件電話", pos="3.1,5.1!"];
   p_id [label=<<U>商品編號</U>>, pos="9.4,6!"]; p_name [label="商品名稱", pos="10.8,6.3!"]; p_price [label="定價", pos="12,5.7!"];
   p_img [label="圖片代碼", pos="12.4,4.6!"]; p_desc [label="說明", pos="12.4,3.5!"]; p_active [label="上架", pos="12,2.5!"];
@@ -37,8 +37,8 @@ graph ER {
   Product -- BelongsTo [headlabel="N", labeldistance=1.6];
   BelongsTo -- Category [taillabel="1", labeldistance=1.6];
 
-  Customer -- {c_id c_name c_mail c_phone c_city c_join};
-  Order -- {o_id o_date o_status o_pay o_rec o_note o_addr o_phone};
+  Customer -- {c_id c_mail c_phone c_city c_join};
+  Order -- {o_id o_date o_status o_pay o_note o_addr o_phone};
   o_addr -- {o_addr_city o_addr_line};
   Product -- {p_id p_name p_price p_img p_desc p_active p_size};
   Contains -- {ci_qty ci_price ci_size};

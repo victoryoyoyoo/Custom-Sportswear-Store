@@ -25,7 +25,6 @@ GO
 CREATE TABLE 顧客
 (
     顧客編號 VARCHAR(10),
-    姓名     NVARCHAR(20) NOT NULL,
     電子郵件 VARCHAR(60)  NOT NULL UNIQUE,
     手機     VARCHAR(12)  NOT NULL,
     縣市     NVARCHAR(10) NOT NULL,
@@ -78,7 +77,6 @@ CREATE TABLE 訂單
     訂購日期 DATE         NOT NULL,
     狀態     NVARCHAR(4)  NOT NULL CHECK (狀態 IN (N'已成立', N'已出貨', N'已完成', N'已取消')),
     付款方式 NVARCHAR(10) NOT NULL CHECK (付款方式 IN (N'信用卡', N'貨到付款', N'ATM 轉帳')),
-    收件人   NVARCHAR(20) NOT NULL,
     收件電話 VARCHAR(12),
     收件縣市 NVARCHAR(10) NOT NULL,
     收件地址 NVARCHAR(60),

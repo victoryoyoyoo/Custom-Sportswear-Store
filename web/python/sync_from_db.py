@@ -18,10 +18,10 @@ QUERIES = {
                (SELECT STRING_AGG(商品尺寸.尺寸, '/') WITHIN GROUP (ORDER BY 商品尺寸.排序) FROM 商品尺寸 WHERE 商品尺寸.商品編號 = 商品.商品編號),
                ISNULL(商品.說明, ''), CAST(商品.上架 AS INT)
         FROM 商品 JOIN 分類 ON 分類.分類編號 = 商品.分類編號 ORDER BY 商品.商品編號"""),
-    "customers.csv": (["customer_id", "name", "email", "phone", "city", "joined"],
-                      "SELECT 顧客編號, 姓名, 電子郵件, 手機, 縣市, CONVERT(CHAR(10), 加入日期, 23) FROM 顧客 ORDER BY 顧客編號"),
-    "orders.csv": (["order_id", "customer_id", "date", "status", "payment", "recipient", "phone", "city", "address", "note"],
-                   "SELECT 訂單編號, 顧客編號, CONVERT(CHAR(10), 訂購日期, 23), 狀態, 付款方式, 收件人, ISNULL(收件電話, ''), 收件縣市, ISNULL(收件地址, ''), ISNULL(備註, '') FROM 訂單 ORDER BY 訂單編號"),
+    "customers.csv": (["customer_id", "email", "phone", "city", "joined"],
+                      "SELECT 顧客編號, 電子郵件, 手機, 縣市, CONVERT(CHAR(10), 加入日期, 23) FROM 顧客 ORDER BY 顧客編號"),
+    "orders.csv": (["order_id", "customer_id", "date", "status", "payment", "phone", "city", "address", "note"],
+                   "SELECT 訂單編號, 顧客編號, CONVERT(CHAR(10), 訂購日期, 23), 狀態, 付款方式, ISNULL(收件電話, ''), 收件縣市, ISNULL(收件地址, ''), ISNULL(備註, '') FROM 訂單 ORDER BY 訂單編號"),
     "order_items.csv": (["order_id", "line", "product_id", "color", "size", "qty", "price"],
                         "SELECT 訂單編號, 項次, 商品編號, 顏色代碼, 尺寸, 數量, 成交單價 FROM 訂單明細 ORDER BY 訂單編號, 項次"),
 }
