@@ -11,7 +11,7 @@
 
 ## 真實資料
 
-[UCI Online Retail II](https://archive.ics.uci.edu/dataset/502/online+retail+ii)（Daqing Chen，CC BY 4.0），英國網路商店 2009–2011 年的交易。`data/real.js` 是整理好的結果；要重新產生，把 `online_retail_II.xlsx` 放進 `data/raw/`，執行 `python python/prepare_real_data.py`。
+[UCI Online Retail II](https://archive.ics.uci.edu/dataset/502/online+retail+ii)（Daqing Chen，CC BY 4.0），英國網路商店 2009 到 2011 年的交易。`data/real.js` 是整理好的結果；要重新產生，把 `online_retail_II.xlsx` 放進 `data/raw/`，執行 `python python/prepare_real_data.py`。
 
 | | 模型 | 簡單做法 | 全部猜同一類 |
 |---|---|---|---|
