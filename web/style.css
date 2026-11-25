@@ -360,3 +360,6 @@ h2.sub { margin-top: 20px; }
   .product-img { height: auto; padding: 0; }
   .product-img img { max-height: none; }
 }
+
+pre.sql { font: 13px/1.5 Consolas, "Courier New", monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; margin: 0 0 14px; overflow-x: auto; white-space: pre-wrap; }
+.table-wrap { overflow-x: auto; }

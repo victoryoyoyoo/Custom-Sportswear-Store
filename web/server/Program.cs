@@ -49,6 +49,8 @@ api.MapPost("/orders", (OrderInput o) => Run(async () => await repo.CreateOrderA
 api.MapMethods("/orders/{id}", ["PATCH"], (string id, StatusInput s) => Run(async () => { await repo.UpdateOrderStatusAsync(id, s.Status); return null; }));
 api.MapDelete("/orders/{id}", (string id) => Run(async () => { await repo.DeleteOrderAsync(id); return null; }));
 
+api.MapGet("/views/{name}", (string name) => Run(async () => await repo.LoadViewAsync(name)));
+
 api.MapPost("/reset", () => Run(async () => { await repo.ResetAsync(Path.Combine(siteRoot, "database")); return null; }));
 
 app.Run();

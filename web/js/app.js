@@ -525,10 +525,54 @@ document.querySelectorAll("[data-admin]").forEach((b) => b.addEventListener("cli
 }));
 $("c-search").addEventListener("input", () => { custPage = 0; renderAdmin(); });
 
+const VIEWS = [
+  { name: "熱銷商品前五名檢視", note: "TOP 5 加上 JOIN 四張表，算出賣最多件的商品。", sql: "SELECT * FROM 熱銷商品前五名檢視 ORDER BY 銷售件數 DESC" },
+  { name: "商品銷售檢視", note: "LEFT JOIN，沒賣過的商品也會列出來。", sql: "SELECT * FROM 商品銷售檢視 ORDER BY 銷售金額 DESC" },
+  { name: "顧客RFM檢視", note: "每位顧客最近購買、次數、總金額，顧客分群用的就是這些欄位。", sql: "SELECT TOP 20 * FROM 顧客RFM檢視 ORDER BY 總金額 DESC" },
+  { name: "顧客公開資料檢視", note: "只給客服看的欄位，電子郵件和手機被藏起來。", sql: "SELECT TOP 20 * FROM 顧客公開資料檢視 ORDER BY 顧客編號" },
+  { name: "訂單金額檢視", note: "訂單總金額不存在資料表裡，由明細即時加總。", sql: "SELECT TOP 20 * FROM 訂單金額檢視 ORDER BY 訂購日期 DESC, 訂單編號 DESC" },
+];
+$("v-name").innerHTML = VIEWS.map((v) => `<option>${v.name}</option>`).join("");
+$("v-name").addEventListener("change", renderViews);
+
+function localView(name) {
+  const valid = db.orders.filter((o) => o.status !== "已取消");
+  const sales = db.products.map((p) => {
+    const lines = valid.flatMap((o) => o.items.filter((i) => i.product === p.id));
+    return [p.id, p.name, p.category, lines.reduce((s, i) => s + i.qty, 0), lines.reduce((s, i) => s + i.qty * i.price, 0)];
+  });
+  if (name === "熱銷商品前五名檢視") return { columns: ["商品編號", "商品名稱", "分類名稱", "銷售件數"], rows: [...sales].sort((a, b) => b[3] - a[3]).slice(0, 5).map((r) => r.slice(0, 4)) };
+  if (name === "商品銷售檢視") return { columns: ["商品編號", "商品名稱", "分類名稱", "銷售件數", "銷售金額"], rows: [...sales].sort((a, b) => b[4] - a[4]) };
+  if (name === "顧客RFM檢視") {
+    return { columns: ["顧客編號", "姓名", "最近購買天數", "購買次數", "總金額", "平均金額"], rows: state.profiles.map((p) => [p.id, customerById(p.id)?.name || "", p.recency, p.frequency, p.monetary, Math.round(p.average)]).sort((a, b) => b[4] - a[4]).slice(0, 20) };
+  }
+  if (name === "顧客公開資料檢視") return { columns: ["顧客編號", "姓名", "縣市", "加入日期"], rows: [...db.customers].sort((a, b) => a.id.localeCompare(b.id)).slice(0, 20).map((c) => [c.id, c.name, c.city, c.joined]) };
+  return {
+    columns: ["訂單編號", "顧客編號", "訂購日期", "狀態", "小計", "件數"],
+    rows: [...db.orders].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id.localeCompare(a.id))).slice(0, 20).map((o) => [o.id, o.customer, o.date, o.status, orderTotal(o), o.items.reduce((s, i) => s + i.qty, 0)]),
+  };
+}
+
+async function renderViews() {
+  const v = VIEWS.find((x) => x.name === $("v-name").value) || VIEWS[0];
+  $("v-note").textContent = `${v.note}${Store.mode === "server" ? "下面的資料由 C# 程式直接查詢 SQL Server 的檢視表。" : "目前沒連資料庫，用同樣的規則在網頁上算；連 SQL Server 時會直接查詢檢視表。"}`;
+  $("v-sql").textContent = v.sql + ";";
+  try {
+    const data = Store.mode === "server" ? await Store.view(v.name) : localView(v.name);
+    const money2 = (c) => /金額|小計/.test(c);
+    const cell = (c, x) => (x === null || x === undefined ? "" : typeof x === "number" ? (money2(c) ? money(x) : Math.round(x).toLocaleString("en-US")) : esc(x));
+    $("v-table").innerHTML = `<thead><tr>${data.columns.map((c) => `<th${typeof data.rows[0]?.[data.columns.indexOf(c)] === "number" ? ' class="num"' : ""}>${esc(c)}</th>`).join("")}</tr></thead><tbody>${data.rows.map((r) => `<tr>${r.map((x, i) => `<td${typeof x === "number" ? ' class="num"' : ""}>${cell(data.columns[i], x)}</td>`).join("")}</tr>`).join("")}</tbody>`;
+  } catch (err) {
+    $("v-table").innerHTML = `<tbody><tr><td class="empty">${esc(err.message)}</td></tr></tbody>`;
+  }
+}
+
 function renderAdmin() {
   document.querySelectorAll("[data-admin]").forEach((b) => b.classList.toggle("active", b.dataset.admin === adminView));
   $("admin-products").hidden = adminView !== "products";
   $("admin-customers").hidden = adminView !== "customers";
+  $("admin-views").hidden = adminView !== "views";
+  if (adminView === "views") renderViews();
   $("mode-label").textContent = Store.mode === "server" ? "資料來源：SQL Server" : "資料來源：本機示範資料（存在這台電腦的瀏覽器）";
   const sold = soldCount();
   $("p-body").innerHTML = db.products.map((p) => `

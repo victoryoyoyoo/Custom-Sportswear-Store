@@ -217,6 +217,7 @@
         <div class="segs" role="group" aria-label="管理項目">
           <button class="seg active" data-admin="products">商品管理</button>
           <button class="seg" data-admin="customers">顧客管理</button>
+          <button class="seg" data-admin="views">檢視表</button>
         </div>
         <div class="toolbar-right">
           <span class="muted small" id="mode-label"></span>
@@ -246,6 +247,15 @@
           <tbody id="c-body"></tbody>
         </table>
         <div class="pager"><button class="ghost" id="c-prev">上一頁</button><span id="c-page"></span><button class="ghost" id="c-next">下一頁</button></div>
+      </div>
+      <div class="block" id="admin-views" hidden>
+        <div class="block-head">
+          <h2>檢視表</h2>
+          <select id="v-name" aria-label="選擇檢視表"></select>
+        </div>
+        <p class="note flush" id="v-note"></p>
+        <pre class="sql" id="v-sql"></pre>
+        <div class="table-wrap"><table class="table" id="v-table"></table></div>
       </div>
     </section>
 

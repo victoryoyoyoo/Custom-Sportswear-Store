@@ -3,7 +3,7 @@
 可以實際下單的運動用品商店，資料存在 SQL Server，後台用機器學習分析顧客。
 
 - 商品、購物車、結帳、訂單
-- 管理：商品、顧客的新增、修改、刪除，訂單狀態修改與刪除
+- 管理：商品、顧客的新增、修改、刪除，訂單狀態修改與刪除，查看資料庫的檢視表
 - 顧客分群：K-means（最近購買、購買次數、總金額、平均金額），PCA 畫圖，手肘法選 K
 - 商品推薦：顧客 × 商品購買紀錄的餘弦相似度
 - 流失預測：邏輯回歸，預測接下來 90 天會不會再買，附 5 折交叉驗證
@@ -22,7 +22,7 @@
 
 ### 連 SQL Server
 
-1. 用 SSMS 依序執行 `database/01_建立資料表.sql`、`02_新增資料.sql`、`03_建立檢視表.sql`（`04_查詢範例.sql` 是課堂語法的查詢範例）
+1. 用 SSMS 依序執行 `database/01_建立資料表.sql`、`02_新增資料.sql`、`03_建立檢視表.sql`（`04_查詢範例.sql` 是查詢範例，`05_新增修改刪除.sql`、`06_檢視表操作.sql` 可以在 SSMS 一段一段執行）
 2. 需要 .NET 8 SDK，在 `server` 資料夾執行 `dotnet run`，或雙擊 `server/start.bat`
 3. 打開 http://localhost:5080
 
@@ -36,7 +36,7 @@
 
 - `index.html`、`style.css`、`js/`：網頁（`store.js` 決定資料來自 SQL Server 還是示範資料）
 - `server/`：C# ASP.NET Core 伺服器，`ShopRepository.cs` 放所有 SQL
-- `database/`：建表、資料、檢視表、查詢範例、正規化、ER 圖
+- `database/`：建表、資料、6 個檢視表、查詢範例、新增修改刪除與檢視表操作、正規化、ER 圖
 - `data/`：CSV、網頁用的 `data.js`、真實資料 `real.js`
 - `python/`：產生資料、整理真實資料、匯出 SQL、從資料庫同步、用 scikit-learn 對照、跟簡單做法比較、產生程式導覽
 - `docs/code-map.md`：每個功能的程式位置

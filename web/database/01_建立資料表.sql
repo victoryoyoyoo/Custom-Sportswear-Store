@@ -6,6 +6,9 @@ USE 運動用品商店;
 GO
 
 -- 先刪子資料表，再刪父資料表
+DROP VIEW IF EXISTS 上架商品檢視;
+DROP VIEW IF EXISTS 熱銷商品前五名檢視;
+DROP VIEW IF EXISTS 顧客公開資料檢視;
 DROP VIEW IF EXISTS 商品銷售檢視;
 DROP VIEW IF EXISTS 顧客RFM檢視;
 DROP VIEW IF EXISTS 訂單金額檢視;

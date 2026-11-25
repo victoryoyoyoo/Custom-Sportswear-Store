@@ -59,6 +59,10 @@ const Store = (() => {
     return mode;
   }
 
+  async function view(name) {
+    return api(`views/${encodeURIComponent(name)}`);
+  }
+
   async function all() {
     if (mode === "server") return api("all");
     const c = loadChanges();
@@ -143,5 +147,5 @@ const Store = (() => {
     saveChanges(emptyChanges());
   }
 
-  return { init, all, saveProduct, deleteProduct, saveCustomer, deleteCustomer, createOrder, updateOrder, deleteOrder, reset, get mode() { return mode; } };
+  return { init, all, view, saveProduct, deleteProduct, saveCustomer, deleteCustomer, createOrder, updateOrder, deleteOrder, reset, get mode() { return mode; } };
 })();

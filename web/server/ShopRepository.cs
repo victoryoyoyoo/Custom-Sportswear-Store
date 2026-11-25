@@ -223,6 +223,27 @@ public class ShopRepository(string connectionString)
         if (rows == 0) throw new ShopException("找不到這筆訂單。");
     }
 
+    static readonly Dictionary<string, string> Views = new()
+    {
+        ["熱銷商品前五名檢視"] = "SELECT * FROM 熱銷商品前五名檢視 ORDER BY 銷售件數 DESC",
+        ["商品銷售檢視"] = "SELECT * FROM 商品銷售檢視 ORDER BY 銷售金額 DESC",
+        ["顧客RFM檢視"] = "SELECT TOP 20 * FROM 顧客RFM檢視 ORDER BY 總金額 DESC",
+        ["顧客公開資料檢視"] = "SELECT TOP 20 * FROM 顧客公開資料檢視 ORDER BY 顧客編號",
+        ["訂單金額檢視"] = "SELECT TOP 20 * FROM 訂單金額檢視 ORDER BY 訂購日期 DESC, 訂單編號 DESC",
+    };
+
+    public async Task<object> LoadViewAsync(string name)
+    {
+        if (!Views.TryGetValue(name, out var sql)) throw new ShopException("沒有這個檢視表。");
+        await using var conn = await OpenAsync();
+        await using var r = await Command(conn, sql).ExecuteReaderAsync();
+        var columns = Enumerable.Range(0, r.FieldCount).Select(r.GetName).ToList();
+        var rows = new List<object?[]>();
+        while (await r.ReadAsync())
+            rows.Add(Enumerable.Range(0, r.FieldCount).Select(i => r.IsDBNull(i) ? null : r.GetValue(i) is DateTime d ? d.ToString("yyyy-MM-dd") : r.GetValue(i)).ToArray());
+        return new { name, sql, columns, rows };
+    }
+
     public async Task ResetAsync(string databaseFolder)
     {
         var master = new SqlConnectionStringBuilder(connectionString) { InitialCatalog = "master" }.ConnectionString;
