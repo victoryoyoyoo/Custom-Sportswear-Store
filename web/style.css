@@ -661,3 +661,5 @@ td.empty .btn-sm { margin-left: 10px; }
   .account-btn { padding: 4px; }
   .account-btn > span:not(.avatar), .account-btn .caret { display: none; }
 }
+
+#unzip-hint { display: none !important; }
