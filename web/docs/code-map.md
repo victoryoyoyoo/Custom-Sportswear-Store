@@ -29,17 +29,17 @@
 
 ## SQL 檔
 
-| 檔案 | 內容 | 對應課堂 |
-|---|---|---|
-| `database/01_建立資料表.sql` | CREATE TABLE、主鍵、外鍵、CHECK、UNIQUE、索引 | ch07 DDL |
-| `database/02_新增資料.sql` | INSERT 一年的示範資料（由 `python/export_sql.py` 產生） | ch07 DML |
-| `database/03_建立檢視表.sql` | 6 個檢視表：訂單金額、顧客 RFM、商品銷售、顧客公開資料（隱藏欄位）、熱銷前五名（TOP）、上架商品（可更新） | ch10 |
-| `database/04_查詢範例.sql` | WHERE、LIKE、BETWEEN、GROUP BY／HAVING、INNER／LEFT JOIN、子查詢、INTERSECT／EXCEPT | ch06、ch08、ch09 |
-| `database/05_新增修改刪除.sql` | 在 SSMS 示範 INSERT、UPDATE、DELETE、ALTER TABLE，以及外鍵、CHECK、UNIQUE 擋錯 | ch07 |
-| `database/06_檢視表操作.sql` | 查詢檢視表、透過檢視表 INSERT／UPDATE、WITH CHECK OPTION、DROP VIEW | ch10 |
-| `database/normalization.md` | 未正規化 → 1NF → 2NF → 3NF → BCNF | ch05 |
-| `database/diagrams/er_model.png` | ER 圖（實體、關係、屬性、多值屬性、複合屬性、三元關係） | ch04 |
-| `database/diagrams/schema.png` | 資料表關聯圖（主鍵、外鍵、一對多） | ch03 |
+| 檔案 | 內容 |
+|---|---|
+| `database/01_建立資料表.sql` | CREATE TABLE、主鍵、外鍵、CHECK、UNIQUE、索引 |
+| `database/02_新增資料.sql` | INSERT 一年的示範資料（由 `python/export_sql.py` 產生） |
+| `database/03_建立檢視表.sql` | 6 個檢視表：訂單金額、顧客 RFM、商品銷售、顧客公開資料（隱藏欄位）、熱銷前五名（TOP）、上架商品（可更新） |
+| `database/04_查詢範例.sql` | WHERE、LIKE、BETWEEN、GROUP BY／HAVING、INNER／LEFT JOIN、子查詢、INTERSECT／EXCEPT |
+| `database/05_新增修改刪除.sql` | 在 SSMS 示範 INSERT、UPDATE、DELETE、ALTER TABLE，以及外鍵、CHECK、UNIQUE 擋錯 |
+| `database/06_檢視表操作.sql` | 查詢檢視表、透過檢視表 INSERT／UPDATE、WITH CHECK OPTION、DROP VIEW |
+| `database/normalization.md` | 未正規化 → 1NF → 2NF → 3NF → BCNF |
+| `database/diagrams/er_model.png` | ER 圖（實體、關係、屬性、多值屬性、複合屬性、三元關係） |
+| `database/diagrams/schema.png` | 資料表關聯圖（主鍵、外鍵、一對多） |
 
 ## 機器學習在哪裡
 

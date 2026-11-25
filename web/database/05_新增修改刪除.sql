@@ -1,7 +1,7 @@
 USE 運動用品商店;
 GO
 
--- 1. INSERT（ch07）：新增一位顧客
+-- 1. INSERT：新增一位顧客
 INSERT INTO 顧客 (顧客編號, 電子郵件, 手機, 縣市)
 VALUES ('C999', 'demo999@example.com', '0912-345-678', N'台北市');
 
@@ -17,7 +17,7 @@ VALUES ('O99999', 1, 'P01', 'navy', 'L', 1, 1280),
 
 SELECT * FROM 訂單金額檢視 WHERE 訂單編號 = 'O99999';
 
--- 3. UPDATE（ch07）：顧客換手機、訂單出貨
+-- 3. UPDATE：顧客換手機、訂單出貨
 UPDATE 顧客
 SET 手機 = '0987-654-321'
 WHERE 顧客編號 = 'C999';
@@ -38,14 +38,14 @@ WHERE 顧客.顧客編號 = 'C999';
 -- UNIQUE：電子郵件不能重複
 -- INSERT INTO 顧客 (顧客編號, 電子郵件, 手機, 縣市) VALUES ('C998', 'demo999@example.com', '0911-111-111', N'台中市');
 
--- 5. DELETE（ch07）：先刪子資料表再刪父資料表
+-- 5. DELETE：先刪子資料表再刪父資料表
 -- 訂單明細設了 ON DELETE CASCADE，刪訂單時明細會一起刪掉
 DELETE FROM 訂單 WHERE 訂單編號 = 'O99999';
 DELETE FROM 顧客 WHERE 顧客編號 = 'C999';
 
 SELECT COUNT(*) AS 剩下的示範資料 FROM 顧客 WHERE 顧客編號 = 'C999';
 
--- 6. ALTER TABLE（ch07）：加一個欄位，再拿掉
+-- 6. ALTER TABLE：加一個欄位，再拿掉
 ALTER TABLE 顧客 ADD 生日 DATE NULL;
 SELECT TOP 3 * FROM 顧客;
 ALTER TABLE 顧客 DROP COLUMN 生日;
