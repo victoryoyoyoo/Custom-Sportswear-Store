@@ -43,12 +43,12 @@ THEMES = {
 }
 
 TYPES = {
-    "loyal": {"share": 0.2, "gap": 18, "items": (2, 4), "premium": 0.6},
-    "regular": {"share": 0.28, "gap": 40, "items": (1, 3), "premium": 0.3},
-    "bargain": {"share": 0.14, "gap": 35, "items": (1, 2), "premium": 0.05},
-    "lapsed": {"share": 0.12, "gap": 30, "items": (1, 3), "premium": 0.3},
-    "oneoff": {"share": 0.14, "gap": 20, "items": (1, 2), "premium": 0.1},
-    "slow": {"share": 0.12, "gap": 85, "items": (2, 3), "premium": 0.9},
+    "loyal": {"share": 0.2, "gap": 50, "items": (1, 3), "premium": 0.6},
+    "regular": {"share": 0.28, "gap": 120, "items": (1, 2), "premium": 0.3},
+    "bargain": {"share": 0.14, "gap": 110, "items": (1, 2), "premium": 0.05},
+    "lapsed": {"share": 0.12, "gap": 75, "items": (1, 2), "premium": 0.3},
+    "oneoff": {"share": 0.14, "gap": 60, "items": (1, 2), "premium": 0.1},
+    "slow": {"share": 0.12, "gap": 220, "items": (1, 3), "premium": 0.9},
 }
 
 STREETS = ["中山路", "中正路", "民生路", "民權路", "民族路", "復興路", "建國路", "和平路", "信義路", "仁愛路",

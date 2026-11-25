@@ -6,7 +6,7 @@ SELECT * FROM 熱銷商品前五名檢視;
 
 SELECT 顧客編號, 總金額
 FROM 顧客RFM檢視
-WHERE 購買次數 >= 20
+WHERE 購買次數 >= 9
 ORDER BY 總金額 DESC;
 
 -- 顧客公開資料檢視看不到電子郵件和手機

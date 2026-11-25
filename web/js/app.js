@@ -118,7 +118,7 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 
 const customerSelect = $("customer");
 function fillCustomerSelect() {
-  const keep = customerSelect.value || local.get("shop_customer", "C001");
+  const keep = customerSelect.value || local.get("shop_customer", "C002");
   customerSelect.innerHTML = db.customers.map((c) => `<option value="${c.id}">${c.id}</option>`).join("");
   customerSelect.value = db.customers.some((c) => c.id === keep) ? keep : db.customers[0]?.id;
 }
@@ -129,7 +129,7 @@ customerSelect.addEventListener("change", () => {
 });
 const me = () => customerSelect.value;
 
-let account = local.get("shop_account", "C001");
+let account = local.get("shop_account", "C002");
 const user = () => account;
 const personSvg = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4.8 19.5c1.2-3.4 4-5.2 7.2-5.2s6 1.8 7.2 5.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
 function setAccount(id) {
@@ -186,7 +186,7 @@ document.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeAccountMenu();
 });
-const QUICK_ACCOUNTS = ["C001", "C208", "C015"];
+const QUICK_ACCOUNTS = ["C002", "C060", "C001"];
 function openLogin(next) {
   const quick = QUICK_ACCOUNTS.map(customerById).filter(Boolean);
   openDialog(`
@@ -1291,11 +1291,11 @@ const DEMO = [
   ["登入與商品頁：3D 商品、收藏", () => { filter = "全部"; showTab("shop"); if (!account) openLogin(); }],
   ["籃球鞋：顏色尺寸、也買推薦", () => { showTab("shop"); openProduct("P06"); }],
   ["購物車與結帳", () => showTab("cart")],
-  ["我的訂單", () => { if (!account) setAccount("C001"); showTab("mine"); }],
+  ["我的訂單", () => { if (!account) setAccount("C002"); showTab("mine"); }],
   ["後台：訂單管理與營收", () => showTab("orders")],
-  ["顧客分群：C001 在哪一群", () => { setCustomer("C001"); showTab("segments"); setSource("shop"); }],
+  ["顧客分群：C002 在哪一群", () => { setCustomer("C002"); showTab("segments"); setSource("shop"); }],
   ["商品推薦：相似度與命中率", () => { showTab("recommend"); setSource("shop"); }],
-  ["流失預測：C208 快流失了", () => { setCustomer("C208"); showTab("churn"); setSource("shop"); }],
+  ["流失預測：C060 快流失了", () => { setCustomer("C060"); showTab("churn"); setSource("shop"); }],
   ["切到真實資料，跟規則比", () => { showTab("churn"); setSource("real"); }],
   ["資料庫：檢視表", () => { showTab("admin"); document.querySelector('[data-admin="views"]')?.click(); }],
 ];
