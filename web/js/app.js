@@ -41,7 +41,9 @@ const TAGLINES = {
 };
 const taglineOf = (p) => TAGLINES[p.key] || String(p.description || "").split(/[；。]/)[0];
 const orderTotal = (o) => o.items.reduce((s, i) => s + i.qty * i.price, 0);
-const shippingOf = (sub) => (sub === 0 || sub >= 2000 ? 0 : 80);
+const FREE_SHIPPING = 2000;
+const SHIPPING_FEE = 80;
+const shippingOf = (sub) => (sub === 0 || sub >= FREE_SHIPPING ? 0 : SHIPPING_FEE);
 
 let db = { products: [], customers: [], orders: [] };
 let state = {};
@@ -229,7 +231,7 @@ function renderShop() {
   const [eyebrow, title] = SHOP_HEAD[filter] || [filter, filter];
   $("shop-eyebrow").textContent = eyebrow;
   $("shop-title").textContent = title;
-  $("shop-sub").textContent = `${activeCount} 種商品・${COLORS.length} 款配色・單筆滿 NT$2,000 免運`;
+  $("shop-sub").textContent = `${activeCount} 種商品・${COLORS.length} 款配色・單筆滿 ${money(FREE_SHIPPING)} 免運`;
   let list = db.products.filter((p) => p.active && (filter === "全部" || (filter === FAV ? favs.has(p.id) : p.category === filter)) && (!q || p.name.includes(q)));
   const sort = $("sort").value;
   if (sort === "price-asc") list = [...list].sort((a, b) => a.price - b.price);
@@ -526,9 +528,9 @@ function renderCart() {
     : `<tr><td colspan="5" class="empty">購物車是空的，到「商品」挑幾樣吧。</td></tr>`;
   $("cart-clear").hidden = !lines.length;
   $("cart-subtotal").textContent = money(sub);
-  $("cart-shipping").textContent = sub >= 2000 ? "免運" : money(ship);
+  $("cart-shipping").textContent = sub >= FREE_SHIPPING ? "免運" : money(ship);
   $("cart-total").textContent = money(sub + ship);
-  $("free-hint").textContent = sub > 0 && sub < 2000 ? `再買 ${money(2000 - sub)} 就免運` : sub >= 2000 ? "已達免運門檻" : "滿 NT$2,000 免運";
+  $("free-hint").textContent = sub > 0 && sub < FREE_SHIPPING ? `再買 ${money(FREE_SHIPPING - sub)} 就免運` : sub >= FREE_SHIPPING ? "已達免運門檻" : `滿 ${money(FREE_SHIPPING)} 免運`;
   $("checkout").disabled = !lines.length;
   const recs = scoreFor(new Set(lines.map((l) => l.p.id))).slice(0, 3);
   $("cart-recs").innerHTML = lines.length && recs.length
@@ -1278,4 +1280,50 @@ function renderChurn() {
   fillCustomerSelect();
   setCart(getCart());
   renderShop();
+  if (new URLSearchParams(location.search).has("demo")) toggleDemo(true);
 })();
+
+const setCustomer = (id) => {
+  if (customerSelect.value === id) return;
+  customerSelect.value = id;
+  customerSelect.dispatchEvent(new Event("change"));
+};
+const setSource = (src) => {
+  const b = document.querySelector(`#${currentTab()} .src-switch [data-src="${src}"]`);
+  if (b && source !== src) b.click();
+};
+const DEMO = [
+  ["商品頁：3D 商品、收藏", () => { filter = "全部"; showTab("shop"); }],
+  ["籃球鞋：360° 旋轉、也買推薦", () => { showTab("shop"); openProduct("P06"); }],
+  ["購物車與結帳", () => showTab("cart")],
+  ["我的訂單", () => showTab("mine")],
+  ["後台：訂單管理與營收", () => showTab("orders")],
+  ["顧客分群：C001 在哪一群", () => { setCustomer("C001"); showTab("segments"); setSource("shop"); }],
+  ["商品推薦：相似度與命中率", () => { showTab("recommend"); setSource("shop"); }],
+  ["流失預測：C208 快流失了", () => { setCustomer("C208"); showTab("churn"); setSource("shop"); }],
+  ["切到真實資料，跟規則比", () => { showTab("churn"); setSource("real"); }],
+  ["資料庫：檢視表", () => { showTab("admin"); document.querySelector('[data-admin="views"]')?.click(); }],
+];
+let demoAt = -1;
+function renderDemo() {
+  $("demo-steps").innerHTML = DEMO.map(([label], i) => `<li><button class="${i === demoAt ? "on" : i < demoAt ? "done" : ""}" data-step="${i}"><span>${i + 1}</span>${label}</button></li>`).join("");
+}
+function toggleDemo(show = $("demo").hidden) {
+  $("demo").hidden = !show;
+  if (show) renderDemo();
+}
+$("demo-steps").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-step]");
+  if (!b) return;
+  demoAt = Number(b.dataset.step);
+  if ($("dialog").open) closeDialog();
+  DEMO[demoAt][1]();
+  renderDemo();
+});
+$("demo-close").addEventListener("click", () => toggleDemo(false));
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "d" && e.key !== "D") return;
+  if (e.ctrlKey || e.metaKey || e.altKey || e.target.closest("input, select, textarea, [contenteditable]")) return;
+  toggleDemo();
+});
+

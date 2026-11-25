@@ -25,8 +25,15 @@ WHERE 商品編號 = 'P99';
 
 SELECT 商品編號, 商品名稱, 定價 FROM 商品 WHERE 商品編號 = 'P99';
 
--- WITH CHECK OPTION 會擋下這行：改成下架後就不屬於「上架商品」了（可以選起來執行看錯誤訊息）
--- UPDATE 上架商品檢視 SET 上架 = 0 WHERE 商品編號 = 'P99';
+-- WITH CHECK OPTION：改成下架後就不屬於「上架商品」了，資料庫會擋下，商品維持上架
+BEGIN TRY
+    UPDATE 上架商品檢視 SET 上架 = 0 WHERE 商品編號 = 'P99';
+END TRY
+BEGIN CATCH
+    SELECT ERROR_NUMBER() AS 錯誤代碼, ERROR_MESSAGE() AS 被擋下的原因;
+END CATCH;
+
+SELECT 商品編號, 商品名稱, 上架 FROM 商品 WHERE 商品編號 = 'P99';
 
 -- 刪掉示範資料
 DELETE FROM 上架商品檢視 WHERE 商品編號 = 'P99';
