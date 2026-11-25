@@ -1,0 +1,47 @@
+graph ER {
+  layout=neato; overlap=false; splines=false; sep="+14"; outputorder=edgesfirst;
+  graph [fontname="Microsoft JhengHei", bgcolor="white", pad="0.4"];
+  node [fontname="Microsoft JhengHei", fontsize=13, color="#2F5D8C", penwidth=1.4];
+  edge [color="#7B8494", penwidth=1.2, fontname="Microsoft JhengHei", fontsize=12, fontcolor="#C0392B"];
+
+  node [shape=box, style="filled", fillcolor="#E8EEF5", fontsize=15, width=1.2, height=0.55];
+  Customer [label="顧客", pos="0,4!"];
+  Order [label="訂單", pos="5,4!"];
+  Product [label="商品", pos="10,4!"];
+  Category [label="分類", pos="10,-0.6!"];
+  Color [label="顏色", pos="7.5,0.2!"];
+
+  node [shape=diamond, style="filled", fillcolor="#FDF3E6", color="#B26A12", fontsize=13, width=1.3, height=0.8];
+  Places [label="下單", pos="2.5,4!"];
+  Contains [label="訂購明細", pos="7.5,2.4!", width=1.6];
+  BelongsTo [label="屬於", pos="10,1.8!"];
+
+  node [shape=ellipse, style="", color="#5B6270", fontsize=12, width=0.9, height=0.4];
+  c_id [label=<<U>顧客編號</U>>, pos="-1.6,5.8!"]; c_name [label="姓名", pos="-0.2,6.2!"]; c_mail [label="電子郵件", pos="1.2,6!"];
+  c_phone [label="手機", pos="-2,4.5!"]; c_city [label="縣市", pos="-2,3.4!"]; c_join [label="加入日期", pos="-1.3,2.3!"];
+  o_id [label=<<U>訂單編號</U>>, pos="3.6,6!"]; o_date [label="訂購日期", pos="5,6.3!"]; o_status [label="狀態", pos="6.3,6!"];
+  o_pay [label="付款方式", pos="3,2.4!"]; o_rec [label="收件人", pos="4.2,1.8!"]; o_note [label="備註", pos="5.3,1.5!"];
+  o_addr [label="收件地址", pos="7,5.6!"]; o_addr_city [label="縣市", pos="7.2,6.8!"]; o_addr_line [label="地址", pos="8.4,6.4!"]; o_phone [label="收件電話", pos="3.1,5.1!"];
+  p_id [label=<<U>商品編號</U>>, pos="9.4,6!"]; p_name [label="商品名稱", pos="10.8,6.3!"]; p_price [label="定價", pos="12,5.7!"];
+  p_img [label="圖片代碼", pos="12.4,4.6!"]; p_desc [label="說明", pos="12.4,3.5!"]; p_active [label="上架", pos="12,2.5!"];
+  p_size [label="尺寸", peripheries=2, pos="11.6,1.4!"];
+  ci_qty [label="數量", pos="8.5,0.9!"]; ci_price [label="成交單價", pos="9.2,1.9!"]; ci_size [label="尺寸", pos="6.3,1.2!"];
+  col_key [label=<<U>顏色代碼</U>>, pos="6.2,-0.6!"]; col_name [label="顏色名稱", pos="7.5,-1.3!"]; col_hex [label="色碼", pos="8.8,-0.6!"];
+  cat_id [label=<<U>分類編號</U>>, pos="9,-1.7!"]; cat_name [label="分類名稱", pos="11.1,-1.7!"];
+
+  Customer -- Places [headlabel="1", labeldistance=1.6];
+  Places -- Order [taillabel="N", labeldistance=1.6];
+  Order -- Contains [headlabel="M", labeldistance=1.8];
+  Contains -- Product [taillabel="N", labeldistance=1.8];
+  Contains -- Color [taillabel="P", labeldistance=1.8];
+  Product -- BelongsTo [headlabel="N", labeldistance=1.6];
+  BelongsTo -- Category [taillabel="1", labeldistance=1.6];
+
+  Customer -- {c_id c_name c_mail c_phone c_city c_join};
+  Order -- {o_id o_date o_status o_pay o_rec o_note o_addr o_phone};
+  o_addr -- {o_addr_city o_addr_line};
+  Product -- {p_id p_name p_price p_img p_desc p_active p_size};
+  Contains -- {ci_qty ci_price ci_size};
+  Color -- {col_key col_name col_hex};
+  Category -- {cat_id cat_name};
+}

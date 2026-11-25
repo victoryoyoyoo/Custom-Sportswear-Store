@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>運動用品商店</title>
+  <link rel="icon" href="img/p/jersey_royal.webp">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <strong class="store">運動用品商店</strong>
+      <nav class="nav" aria-label="功能">
+        <button class="nav-item active" data-tab="shop">商品</button>
+        <button class="nav-item" data-tab="cart">購物車 <span id="cart-count" class="badge"></span></button>
+        <button class="nav-item" data-tab="orders">訂單</button>
+        <span class="nav-sep" aria-hidden="true"></span>
+        <button class="nav-item" data-tab="segments">顧客分群</button>
+        <button class="nav-item" data-tab="recommend">商品推薦</button>
+        <button class="nav-item" data-tab="churn">流失預測</button>
+        <span class="nav-sep" aria-hidden="true"></span>
+        <button class="nav-item" data-tab="admin">管理</button>
+      </nav>
+      <label class="who">目前顧客 <select id="customer" aria-label="目前顧客"></select></label>
+    </div>
+  </header>
+
+  <main>
+    <section id="shop" class="panel active">
+      <div class="toolbar">
+        <div id="category-filter" class="segs" role="group" aria-label="分類"></div>
+        <div class="toolbar-right">
+          <select id="sort" aria-label="排序">
+            <option value="default">預設排序</option>
+            <option value="popular">熱銷優先</option>
+            <option value="price-asc">價格低到高</option>
+            <option value="price-desc">價格高到低</option>
+          </select>
+          <input id="search" type="search" placeholder="搜尋商品" aria-label="搜尋商品">
+        </div>
+      </div>
+      <div id="product-grid" class="grid-products"></div>
+      <div class="block for-you">
+        <h2 id="for-you-title">可能會喜歡</h2>
+        <div id="for-you" class="mini-row"></div>
+        <p class="note" id="for-you-note"></p>
+      </div>
+    </section>
+
+    <section id="cart" class="panel">
+      <div class="split">
+        <div class="block">
+          <div class="block-head">
+            <h2>購物車　<span class="muted" id="cart-customer"></span></h2>
+            <button class="ghost" id="cart-clear" hidden>清空</button>
+          </div>
+          <table class="table">
+            <thead><tr><th>商品</th><th class="num">單價</th><th>數量</th><th class="num">小計</th><th></th></tr></thead>
+            <tbody id="cart-body"></tbody>
+          </table>
+        </div>
+        <div class="stack">
+          <div class="block">
+            <h2>結帳</h2>
+            <dl class="sum">
+              <dt>商品金額</dt><dd id="cart-subtotal">NT$0</dd>
+              <dt>運費</dt><dd id="cart-shipping">NT$0</dd>
+              <dt class="total">總計</dt><dd id="cart-total" class="total">NT$0</dd>
+            </dl>
+            <p class="note" id="free-hint">滿 NT$2,000 免運</p>
+            <button class="btn wide" id="checkout">前往結帳</button>
+          </div>
+          <div class="block">
+            <h2>加購推薦</h2>
+            <div id="cart-recs"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="orders" class="panel">
+      <div class="kpis">
+        <div class="kpi"><span>總營收</span><strong id="o-revenue">—</strong></div>
+        <div class="kpi"><span>有效訂單</span><strong id="o-count">—</strong></div>
+        <div class="kpi"><span>平均客單價</span><strong id="o-avg">—</strong></div>
+        <div class="kpi"><span>待出貨</span><strong id="o-open">—</strong></div>
+      </div>
+      <div class="block">
+        <h2>每月營收</h2>
+        <div class="chart chart-sm"><canvas id="o-chart" aria-label="每月營收"></canvas></div>
+      </div>
+      <div class="block">
+        <div class="block-head">
+          <h2>訂單紀錄</h2>
+          <div class="actions">
+            <input id="o-search" type="search" placeholder="訂單編號、顧客" aria-label="搜尋訂單">
+            <select id="o-status" aria-label="狀態"><option value="">全部狀態</option><option>已成立</option><option>已出貨</option><option>已完成</option><option>已取消</option></select>
+            <button class="ghost" id="o-export">匯出 CSV</button>
+          </div>
+        </div>
+        <table class="table">
+          <thead><tr><th>訂單</th><th>日期</th><th>顧客</th><th>商品</th><th class="num">金額</th><th>狀態</th></tr></thead>
+          <tbody id="o-body"></tbody>
+        </table>
+        <div class="pager"><button class="ghost" id="o-prev">上一頁</button><span id="o-page"></span><button class="ghost" id="o-next">下一頁</button></div>
+      </div>
+    </section>
+
+    <section id="segments" class="panel">
+      <div class="src-bar">
+        <div class="segs src-switch" role="group" aria-label="資料來源"><button class="seg active" data-src="shop">本店資料（模擬）</button><button class="seg" data-src="real">真實資料（UCI）</button></div>
+        <p class="note flush src-note"></p>
+      </div>
+      <div class="block">
+        <div class="block-head">
+          <h2>K-means 顧客分群</h2>
+          <div class="controls">
+            <label>K <select id="k-select"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+            <label>顯示
+              <select id="seg-view">
+                <option value="pca">PCA 降成兩維</option>
+                <option value="frequency-monetary">購買次數 × 總金額</option>
+                <option value="recency-monetary">最近購買 × 總金額</option>
+                <option value="recency-frequency">最近購買 × 購買次數</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="chart chart-lg"><canvas id="seg-chart" aria-label="顧客分群散佈圖"></canvas></div>
+        <p class="note">特徵：最近一次購買、購買次數、總金額、平均每次金額（後三個先取 log），標準化後再分群。<b id="seg-me"></b></p>
+      </div>
+      <div class="split">
+        <div class="block">
+          <h2>各群特徵與建議做法</h2>
+          <table class="table" id="seg-table"></table>
+        </div>
+        <div class="block">
+          <h2>手肘法選 K</h2>
+          <div class="chart chart-sm"><canvas id="elbow-chart" aria-label="手肘法"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="recommend" class="panel">
+      <div class="src-bar">
+        <div class="segs src-switch" role="group" aria-label="資料來源"><button class="seg active" data-src="shop">本店資料（模擬）</button><button class="seg" data-src="real">真實資料（UCI）</button></div>
+        <p class="note flush src-note"></p>
+      </div>
+      <div class="split">
+        <div class="block">
+          <div class="block-head">
+            <h2>買了這個的人也買</h2>
+            <select id="rec-product" aria-label="選擇商品"></select>
+          </div>
+          <div class="chart chart-sm"><canvas id="rec-chart" aria-label="相似商品"></canvas></div>
+          <p class="note" id="rec-note"></p>
+        </div>
+        <div class="block">
+          <h2>怎麼算的</h2>
+          <ol class="steps">
+            <li>把每位顧客買過哪些商品，排成一張「顧客 × 商品」的表。</li>
+            <li>每個商品變成一個向量：哪些顧客買過它。</li>
+            <li>算兩個商品向量的餘弦相似度，越接近 1，代表越常被同一群人買。</li>
+            <li>推薦相似度最高的商品；購物車有好幾樣時，把相似度加起來排序。</li>
+          </ol>
+          <h2 class="sub">推薦準不準</h2>
+          <div class="kpis kpis-2" id="rec-eval"></div>
+          <p class="note flush" id="rec-eval-note"></p>
+        </div>
+      </div>
+      <div class="block">
+        <h2>商品相似度矩陣</h2>
+        <p class="note flush" id="sim-note">顏色越深，兩個商品越常被同一批顧客買。</p>
+        <div class="heatmap" id="sim-heatmap"></div>
+      </div>
+    </section>
+
+    <section id="churn" class="panel">
+      <div class="src-bar">
+        <div class="segs src-switch" role="group" aria-label="資料來源"><button class="seg active" data-src="shop">本店資料（模擬）</button><button class="seg" data-src="real">真實資料（UCI）</button></div>
+        <p class="note flush src-note"></p>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><span>測試資料準確率</span><strong id="ch-acc">—</strong></div>
+        <div class="kpi"><span>5 折交叉驗證準確率</span><strong id="ch-cv">—</strong></div>
+        <div class="kpi"><span id="ch-rule-label">規則：太久沒買算流失</span><strong id="ch-rule">—</strong></div>
+        <div class="kpi"><span id="ch-base-label">全部猜「不會流失」</span><strong id="ch-base">—</strong></div>
+        <div class="kpi"><span>精確率 / 召回率</span><strong id="ch-rec">—</strong></div>
+      </div>
+      <p class="note flush-top" id="ch-setup"></p>
+      <div class="grid-2">
+        <div class="block">
+          <h2>混淆矩陣（測試資料）</h2>
+          <table class="confusion" id="ch-confusion"></table>
+        </div>
+        <div class="block">
+          <h2>邏輯回歸係數</h2>
+          <div class="chart chart-sm"><canvas id="ch-weights" aria-label="邏輯回歸係數"></canvas></div>
+        </div>
+      </div>
+      <div class="block">
+        <div class="block-head">
+          <h2>還沒流失、但風險最高的顧客</h2>
+          <span class="muted" id="ch-me"></span>
+        </div>
+        <table class="table">
+          <thead><tr><th>顧客</th><th class="num">最近購買</th><th class="num">購買次數</th><th class="num">總金額</th><th class="num">流失機率</th></tr></thead>
+          <tbody id="ch-list"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="admin" class="panel">
+      <div class="toolbar">
+        <div class="segs" role="group" aria-label="管理項目">
+          <button class="seg active" data-admin="products">商品管理</button>
+          <button class="seg" data-admin="customers">顧客管理</button>
+        </div>
+        <div class="toolbar-right">
+          <span class="muted small" id="mode-label"></span>
+          <button class="ghost" id="reset-all">還原示範資料</button>
+        </div>
+      </div>
+      <div class="block" id="admin-products">
+        <div class="block-head">
+          <h2>商品</h2>
+          <button class="btn" id="p-add">新增商品</button>
+        </div>
+        <table class="table">
+          <thead><tr><th></th><th>編號</th><th>名稱</th><th>分類</th><th class="num">價格</th><th>尺寸</th><th class="num">已售</th><th>狀態</th><th></th></tr></thead>
+          <tbody id="p-body"></tbody>
+        </table>
+      </div>
+      <div class="block" id="admin-customers" hidden>
+        <div class="block-head">
+          <h2>顧客</h2>
+          <div class="actions">
+            <input id="c-search" type="search" placeholder="編號、姓名、Email、縣市" aria-label="搜尋顧客">
+            <button class="btn" id="c-add">新增顧客</button>
+          </div>
+        </div>
+        <table class="table">
+          <thead><tr><th>編號</th><th>姓名</th><th>Email</th><th>手機</th><th>縣市</th><th>加入日期</th><th class="num">訂單數</th><th></th></tr></thead>
+          <tbody id="c-body"></tbody>
+        </table>
+        <div class="pager"><button class="ghost" id="c-prev">上一頁</button><span id="c-page"></span><button class="ghost" id="c-next">下一頁</button></div>
+      </div>
+    </section>
+
+    <footer class="foot">顧客與訂單是模擬的一年資料，僅供展示。機器學習頁的真實資料來自 <a href="https://archive.ics.uci.edu/dataset/502/online+retail+ii" target="_blank" rel="noopener">UCI Online Retail II</a>（Daqing Chen，CC BY 4.0）。</footer>
+  </main>
+
+  <dialog id="dialog">
+    <button class="dialog-close" id="dialog-close" aria-label="關閉">×</button>
+    <div id="dialog-body"></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/vendor/chart.umd.js"></script>
+  <script src="data/data.js"></script>
+  <script src="data/real.js"></script>
+  <script src="js/ml.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

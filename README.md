@@ -24,3 +24,7 @@ C++17 和 wxWidgets 寫的 Windows 購物程式，有 14 款商品，每款都�
 ```
 
 3. 打開 `CustomSportswearStore.sln`，選 x64 按 F5。
+
+## 網頁版
+
+`web/` 是網頁版，資料存在 SQL Server，另外加了顧客分群、商品推薦和流失預測。直接打開 `web/index.html` 就能用，接資料庫的方式寫在 [web/README.md](web/README.md)。
