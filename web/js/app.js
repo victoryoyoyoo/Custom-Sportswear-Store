@@ -83,6 +83,8 @@ function showTab(name) {
   const side = document.querySelector(`.nav-item[data-tab="${name}"]`)?.dataset.side || "front";
   document.body.dataset.side = side;
   $("side-switch").textContent = side === "front" ? "進入後台" : "回到商店";
+  $("who-label").textContent = side === "front" ? "示範登入" : "查看顧客";
+  $("who").classList.toggle("off", side === "back" && !["segments", "churn"].includes(name));
   document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.tab === name));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === name));
   window.scrollTo(0, 0);
@@ -148,12 +150,21 @@ function confirmBox(text, okLabel = "確定") {
 }
 
 let toastTimer;
-function toast(text, kind = "") {
+function toast(text, kind = "", action) {
   const t = $("toast");
   t.textContent = text;
-  t.className = `toast show ${kind}`;
+  if (action) {
+    const b = document.createElement("button");
+    b.textContent = action.label;
+    b.onclick = () => {
+      t.className = "toast";
+      action.run();
+    };
+    t.append(b);
+  }
+  t.className = `toast show ${kind} ${action ? "has-action" : ""}`;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.className = "toast"), 2400);
+  toastTimer = setTimeout(() => (t.className = "toast"), action ? 4000 : 2400);
 }
 
 let filter = "全部";
@@ -234,6 +245,10 @@ function openProduct(pid) {
   openDialog(`
     <div class="detail">
       <div class="detail-img"><img id="detail-img" src="${img(p.key, picker.color)}" alt="${esc(p.name)}"></div>
+      <div class="detail-also">
+        <h3>買了這個的人也買</h3>
+        <div class="mini-row">${similarTo(pid).map((s) => `<button class="mini" data-open="${s.p.id}"><img src="${img(s.p.key)}" alt=""><span>${esc(s.p.name)}</span><small>相似度 ${s.score.toFixed(2)}</small></button>`).join("")}</div>
+      </div>
       <div class="detail-info">
         <span class="product-cat">${esc(p.category)}・${p.id}</span>
         <h2>${esc(p.name)}</h2>
@@ -246,8 +261,6 @@ function openProduct(pid) {
         <div class="opt row"><span>數量</span><div class="qty"><button data-q="-1" aria-label="減少">−</button><span id="pick-qty">1</span><button data-q="1" aria-label="增加">+</button></div></div>
         <p class="form-msg" id="pick-msg"></p>
         <button class="btn wide" id="pick-add">加入購物車</button>
-        <h3>買了這個的人也買</h3>
-        <div class="mini-row">${similarTo(pid).map((s) => `<button class="mini" data-open="${s.p.id}"><img src="${img(s.p.key)}" alt=""><span>${esc(s.p.name)}</span><small>相似度 ${s.score.toFixed(2)}</small></button>`).join("")}</div>
       </div>
     </div>`, "wide");
   $("dialog-body").onclick = (e) => {
@@ -290,7 +303,13 @@ const getCart = () => local.get("shop_cart_v2", {});
 function setCart(cart) {
   local.set("shop_cart_v2", cart);
   const n = Object.values(cart).reduce((s, v) => s + v, 0);
-  $("cart-count").textContent = n || "";
+  const badge = $("cart-count");
+  if (String(n || "") !== badge.textContent && n) {
+    badge.classList.remove("bump");
+    void badge.offsetWidth;
+    badge.classList.add("bump");
+  }
+  badge.textContent = n || "";
 }
 
 function addToCart(pid, color, size, qty = 1) {
@@ -298,7 +317,7 @@ function addToCart(pid, color, size, qty = 1) {
   const k = cartKey(pid, color, size);
   cart[k] = Math.min(20, (cart[k] || 0) + qty);
   setCart(cart);
-  toast(`已加入購物車：${productById(pid).name}（${colorByKey[color].name}・${size}）`);
+  toast(`已加入購物車：${productById(pid).name}（${colorByKey[color].name}・${size}）`, "", currentTab() === "cart" ? null : { label: "查看購物車", run: () => showTab("cart") });
   if (currentTab() === "cart") renderCart();
 }
 
@@ -347,6 +366,7 @@ $("cart-body").addEventListener("click", (e) => {
   renderCart();
 });
 
+$("cart-continue").addEventListener("click", () => showTab("shop"));
 $("cart-clear").addEventListener("click", async () => {
   if (await confirmBox("確定要清空購物車嗎？", "清空")) {
     setCart({});
@@ -393,7 +413,6 @@ async function submitOrder(e) {
     return;
   }
   const lines = cartLines();
-  const before = segmentOf(me());
   try {
     const order = await Store.createOrder({
       customer: me(), payment: data.payment, recipient: data.recipient.trim(), phone: data.phone.trim(), city: data.city,
@@ -402,14 +421,12 @@ async function submitOrder(e) {
     });
     setCart({});
     await reload();
-    const after = segmentOf(me());
     const sub = orderTotal(order);
-    const name = esc(customerById(me())?.name || me());
     openDialog(`
       <div class="done">
         <h2>訂單已成立</h2>
         <p>訂單編號 <b>${order.id}</b>，應付 ${money(sub + shippingOf(sub))}（${esc(order.payment)}）。</p>
-        <p class="muted">${!before ? `這是 ${name} 的第一筆訂單，之後買得越多，分群和推薦會越準。` : before !== after ? `${name} 的顧客分群從「${before}」變成「${after}」。` : `${name} 目前屬於「${after}」。`}</p>
+        <p class="muted">出貨後狀態會更新，可以在「我的訂單」查看。</p>
         <div class="actions end"><button class="ghost" id="done-orders">查看訂單</button><button class="btn" id="done-shop">繼續購物</button></div>
       </div>`, "small");
     $("done-orders").onclick = () => { closeDialog(); showTab("mine"); openOrder(order.id); };
@@ -931,7 +948,7 @@ function renderSegments() {
     backgroundColor: cssVar(GROUP_COLORS[rankOf[g.index]]),
     pointRadius: src.profiles.length > 1000 ? 2 : 4,
   }));
-  if (mine >= 0) datasets.unshift({ label: "目前顧客", data: [pointOf(mine)], backgroundColor: "transparent", borderColor: cssVar("--text"), borderWidth: 2, pointRadius: 9, pointHoverRadius: 10 });
+  if (mine >= 0) datasets.unshift({ label: "查看中的顧客", data: [pointOf(mine)], backgroundColor: "transparent", borderColor: cssVar("--text"), borderWidth: 2, pointRadius: 9, pointHoverRadius: 10 });
   const label = (key) => RFM_FIELDS.find((f) => f.key === key)?.label || key;
   const axes = view === "pca" ? [`主成分 1（${pct(cl.explained[0])}）`, `主成分 2（${pct(cl.explained[1])}）`] : view.split("-").map(label);
   Charts.scatter($("seg-chart"), datasets, { xLabel: axes[0], yLabel: axes[1] });

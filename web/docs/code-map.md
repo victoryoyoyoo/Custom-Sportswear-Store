@@ -15,16 +15,16 @@
 
 | 功能 | 畫面操作 | 前端 | 資料層 | API 路由 | SQL |
 |---|---|---|---|---|---|
-| 新增商品 | 後台 → 商品與顧客 → 新增商品 | `js/app.js` 第 632 行 | `js/store.js` 第 81 行 | `server/Program.cs` 第 40 行 | `server/ShopRepository.cs` 第 107 行 |
-| 修改商品 | 後台 → 商品與顧客 → 編輯 | `js/app.js` 第 632 行 | `js/store.js` 第 81 行 | `server/Program.cs` 第 41 行 | `server/ShopRepository.cs` 第 116 行 |
-| 刪除商品 | 後台 → 商品與顧客 → 刪除 | `js/app.js` 第 613 行 | `js/store.js` 第 91 行 | `server/Program.cs` 第 42 行 | `server/ShopRepository.cs` 第 137 行 |
-| 新增顧客 | 後台 → 商品與顧客 → 顧客管理 → 新增顧客 | `js/app.js` 第 672 行 | `js/store.js` 第 100 行 | `server/Program.cs` 第 44 行 | `server/ShopRepository.cs` 第 155 行 |
-| 修改顧客 | 後台 → 商品與顧客 → 顧客管理 → 編輯 | `js/app.js` 第 672 行 | `js/store.js` 第 100 行 | `server/Program.cs` 第 45 行 | `server/ShopRepository.cs` 第 160 行 |
-| 刪除顧客 | 後台 → 商品與顧客 → 顧客管理 → 刪除 | `js/app.js` 第 624 行 | `js/store.js` 第 111 行 | `server/Program.cs` 第 46 行 | `server/ShopRepository.cs` 第 174 行 |
-| 新增訂單（結帳） | 前台 → 購物車 → 前往結帳 → 確認下單 | `js/app.js` 第 384 行 | `js/store.js` 第 120 行 | `server/Program.cs` 第 48 行 | `server/ShopRepository.cs` 第 188 行 |
-| 修改訂單狀態 | 後台 → 訂單管理 → 點一筆 → 狀態 → 儲存 | `js/app.js` 第 519 行 | `js/store.js` 第 130 行 | `server/Program.cs` 第 49 行 | `server/ShopRepository.cs` 第 215 行 |
-| 刪除訂單 | 後台 → 訂單管理 → 點一筆 → 刪除訂單 | `js/app.js` 第 518 行 | `js/store.js` 第 137 行 | `server/Program.cs` 第 50 行 | `server/ShopRepository.cs` 第 222 行 |
-| 讀取檢視表 | 後台 → 商品與顧客 → 檢視表 | `js/app.js` 第 586 行 | `js/store.js` 第 62 行 | `server/Program.cs` 第 52 行 | `server/ShopRepository.cs` 第 235 行 |
+| 新增商品 | 後台 → 商品與顧客 → 新增商品 | `js/app.js` 第 649 行 | `js/store.js` 第 81 行 | `server/Program.cs` 第 40 行 | `server/ShopRepository.cs` 第 107 行 |
+| 修改商品 | 後台 → 商品與顧客 → 編輯 | `js/app.js` 第 649 行 | `js/store.js` 第 81 行 | `server/Program.cs` 第 41 行 | `server/ShopRepository.cs` 第 116 行 |
+| 刪除商品 | 後台 → 商品與顧客 → 刪除 | `js/app.js` 第 630 行 | `js/store.js` 第 91 行 | `server/Program.cs` 第 42 行 | `server/ShopRepository.cs` 第 137 行 |
+| 新增顧客 | 後台 → 商品與顧客 → 顧客管理 → 新增顧客 | `js/app.js` 第 689 行 | `js/store.js` 第 100 行 | `server/Program.cs` 第 44 行 | `server/ShopRepository.cs` 第 155 行 |
+| 修改顧客 | 後台 → 商品與顧客 → 顧客管理 → 編輯 | `js/app.js` 第 689 行 | `js/store.js` 第 100 行 | `server/Program.cs` 第 45 行 | `server/ShopRepository.cs` 第 160 行 |
+| 刪除顧客 | 後台 → 商品與顧客 → 顧客管理 → 刪除 | `js/app.js` 第 641 行 | `js/store.js` 第 111 行 | `server/Program.cs` 第 46 行 | `server/ShopRepository.cs` 第 174 行 |
+| 新增訂單（結帳） | 前台 → 購物車 → 前往結帳 → 確認下單 | `js/app.js` 第 404 行 | `js/store.js` 第 120 行 | `server/Program.cs` 第 48 行 | `server/ShopRepository.cs` 第 188 行 |
+| 修改訂單狀態 | 後台 → 訂單管理 → 點一筆 → 狀態 → 儲存 | `js/app.js` 第 536 行 | `js/store.js` 第 130 行 | `server/Program.cs` 第 49 行 | `server/ShopRepository.cs` 第 215 行 |
+| 刪除訂單 | 後台 → 訂單管理 → 點一筆 → 刪除訂單 | `js/app.js` 第 535 行 | `js/store.js` 第 137 行 | `server/Program.cs` 第 50 行 | `server/ShopRepository.cs` 第 222 行 |
+| 讀取檢視表 | 後台 → 商品與顧客 → 檢視表 | `js/app.js` 第 603 行 | `js/store.js` 第 62 行 | `server/Program.cs` 第 52 行 | `server/ShopRepository.cs` 第 235 行 |
 | 查詢全部資料 | 打開網頁時 | `js/app.js` 第 44 行 | `js/store.js` 第 66 行 | `server/Program.cs` 第 38 行 | `server/ShopRepository.cs` 第 41 行 |
 
 ## SQL 檔
@@ -49,14 +49,14 @@
 | 標準化（StandardScaler） | `js/ml.js` 第 35 行 |
 | K-means 分群（含 k-means++） | `js/ml.js` 第 48 行 |
 | PCA 降成兩維 | `js/ml.js` 第 80 行 |
-| 手肘法 | `js/app.js` 第 897 行 |
+| 手肘法 | `js/app.js` 第 914 行 |
 | 餘弦相似度推薦 | `js/ml.js` 第 142 行 |
 | 邏輯回歸（梯度下降） | `js/ml.js` 第 111 行 |
 | 5 折交叉驗證 | `js/ml.js` 第 27 行 |
 | 混淆矩陣、精確率、召回率 | `js/ml.js` 第 126 行 |
-| 流失規則基準（幾天沒買） | `js/app.js` 第 1016 行 |
-| 推薦準確度（對照只推熱銷） | `js/app.js` 第 988 行 |
-| 切換本店／真實資料 | `js/app.js` 第 820 行 |
+| 流失規則基準（幾天沒買） | `js/app.js` 第 1033 行 |
+| 推薦準確度（對照只推熱銷） | `js/app.js` 第 1005 行 |
+| 切換本店／真實資料 | `js/app.js` 第 837 行 |
 
 ## 資料同步
 
