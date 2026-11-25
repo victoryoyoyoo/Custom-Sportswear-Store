@@ -4,7 +4,7 @@ const CHURN_WINDOW = 90;
 const STATUSES = ["已成立", "已出貨", "已完成", "已取消"];
 const CITIES = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "新竹市", "基隆市", "嘉義市", "宜蘭縣"];
 const IMAGE_KEYS = ["jersey", "tee", "hoodie", "shorts", "socks", "sneaker", "backpack", "bottle", "towel", "headband", "wristband"];
-const DEFAULT_COLOR = { jersey: "royal", tee: "steel", hoodie: "jade", shorts: "navy", socks: "onyx", sneaker: "crimson", backpack: "navy", bottle: "sunset", towel: "teal", headband: "violet", wristband: "crimson" };
+const DEFAULT_COLOR = { jersey: "crimson", tee: "royal", hoodie: "steel", shorts: "jade", socks: "teal", sneaker: "sunset", backpack: "steel", bottle: "crimson", towel: "jade", headband: "teal", wristband: "violet" };
 
 const local = {
   get(key, fallback) {
@@ -31,6 +31,15 @@ const shiftDate = (d, n) => new Date(new Date(d).getTime() + n * DAY).toISOStrin
 const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const colorByKey = Object.fromEntries(COLORS.map((c) => [c.key, c]));
 const img = (key, color) => `img/p/${key}_${color || DEFAULT_COLOR[key]}.webp`;
+const TILE_KEYS = new Set(["jersey", "tee", "hoodie", "shorts", "socks", "sneaker", "backpack", "bottle", "towel", "headband", "wristband"]);
+const tileImg = (p) => (TILE_KEYS.has(p.key) ? `img/p/${p.key}_tile.webp` : img(p.key));
+const TAGLINES = {
+  jersey: "印上姓名與背號，即時預覽", tee: "棉感排汗布，胸前可印字", hoodie: "內刷毛保暖，袋鼠口袋",
+  shorts: "側邊撞色條，可印背號", socks: "毛巾底，加厚緩衝", sneaker: "高筒包覆，EU 38–46",
+  backpack: "25L，前袋可印名字", bottle: "擠壓式瓶身，可印名字", towel: "純棉毛圈，織帶可刺繡",
+  headband: "毛巾布吸汗，可加刺繡", wristband: "毛巾布吸汗，可加刺繡",
+};
+const taglineOf = (p) => TAGLINES[p.key] || String(p.description || "").split(/[；。]/)[0];
 const orderTotal = (o) => o.items.reduce((s, i) => s + i.qty * i.price, 0);
 const shippingOf = (sub) => (sub === 0 || sub >= 2000 ? 0 : 80);
 
@@ -168,6 +177,33 @@ function toast(text, kind = "", action) {
 }
 
 let filter = "全部";
+const FAV = "收藏";
+const favKey = () => `shop_fav_${me()}`;
+const getFavs = () => new Set(local.get(favKey(), []));
+function toggleFav(pid) {
+  const favs = getFavs();
+  favs.has(pid) ? favs.delete(pid) : favs.add(pid);
+  local.set(favKey(), [...favs]);
+  return favs.has(pid);
+}
+const heartSvg = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.4 8 3.4 4.5 6.9 4.5c2 0 3.4 1.1 5.1 3 1.7-1.9 3.1-3 5.1-3 3.5 0 5.5 3.5 4.2 6.8-1.8 4.6-9.3 9.2-9.3 9.2z"/></svg>';
+const heartBtn = (pid, on) => `<button class="heart ${on ? "on" : ""}" data-fav="${pid}" aria-pressed="${on}" aria-label="${on ? "取消收藏" : "加入收藏"}">${heartSvg}</button>`;
+const SHOP_HEAD = { 全部: ["SHOP ALL", "全部商品"], 服裝: ["APPAREL", "服裝"], 鞋款: ["SHOES", "鞋款"], 配件: ["ACCESSORIES", "配件"], [FAV]: ["FAVORITES", "我的收藏"] };
+document.addEventListener("click", (e) => {
+  const h = e.target.closest("[data-fav]");
+  if (!h) return;
+  e.stopPropagation();
+  const on = toggleFav(h.dataset.fav);
+  document.querySelectorAll(`[data-fav="${h.dataset.fav}"]`).forEach((b) => {
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", on);
+    b.setAttribute("aria-label", on ? "取消收藏" : "加入收藏");
+    b.classList.remove("pop");
+    void b.offsetWidth;
+    b.classList.add("pop");
+  });
+  if (filter === FAV && !on && currentTab() === "shop") renderShop();
+}, true);
 $("search").addEventListener("input", renderShop);
 $("sort").addEventListener("change", renderShop);
 $("category-filter").addEventListener("click", (e) => {
@@ -184,11 +220,17 @@ function soldCount() {
 
 function renderShop() {
   const cats = ["全部", ...new Set(db.products.filter((p) => p.active).map((p) => p.category))];
-  if (!cats.includes(filter)) filter = "全部";
-  $("category-filter").innerHTML = cats.map((c) => `<button class="seg ${c === filter ? "active" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("");
+  if (!cats.includes(filter) && filter !== FAV) filter = "全部";
+  $("category-filter").innerHTML = [...cats, FAV].map((c) => `<button class="seg ${c === filter ? "active" : ""} ${c === FAV ? "seg-fav" : ""}" data-cat="${esc(c)}">${c === FAV ? `${heartSvg}收藏` : esc(c)}</button>`).join("");
   const q = $("search").value.trim();
   const sold = soldCount();
-  let list = db.products.filter((p) => p.active && (filter === "全部" || p.category === filter) && (!q || p.name.includes(q)));
+  const favs = getFavs();
+  const activeCount = db.products.filter((p) => p.active).length;
+  const [eyebrow, title] = SHOP_HEAD[filter] || [filter, filter];
+  $("shop-eyebrow").textContent = eyebrow;
+  $("shop-title").textContent = title;
+  $("shop-sub").textContent = `${activeCount} 種商品・${COLORS.length} 款配色・單筆滿 NT$2,000 免運`;
+  let list = db.products.filter((p) => p.active && (filter === "全部" || (filter === FAV ? favs.has(p.id) : p.category === filter)) && (!q || p.name.includes(q)));
   const sort = $("sort").value;
   if (sort === "price-asc") list = [...list].sort((a, b) => a.price - b.price);
   if (sort === "price-desc") list = [...list].sort((a, b) => b.price - a.price);
@@ -196,14 +238,14 @@ function renderShop() {
   $("product-grid").innerHTML = list.length
     ? list.map((p) => `
       <article class="product">
-        <button class="product-img" data-open="${p.id}" aria-label="查看${esc(p.name)}"><img src="${img(p.key)}" alt="${esc(p.name)}" loading="lazy"></button>
+        <button class="product-img" data-open="${p.id}" aria-label="查看${esc(p.name)}"><img src="${tileImg(p)}" alt="${esc(p.name)}" loading="lazy"></button>
         <div class="product-body">
-          <span class="product-cat">${esc(p.category)}・已售 ${(sold[p.id] || 0).toLocaleString("en-US")}</span>
-          <h3><button class="link" data-open="${p.id}">${esc(p.name)}</button></h3>
-          <div class="product-foot"><strong>${money(p.price)}</strong><button class="btn-sm" data-open="${p.id}">選購</button></div>
+          <div class="product-head"><h3><button class="link" data-open="${p.id}">${esc(p.name)}</button></h3><strong class="price">${money(p.price)}</strong></div>
+          <p class="tagline">${esc(taglineOf(p))}</p>
+          <div class="product-foot"><button class="more" data-open="${p.id}">查看商品 <span aria-hidden="true">→</span></button>${heartBtn(p.id, favs.has(p.id))}</div>
         </div>
       </article>`).join("")
-    : `<p class="empty">找不到符合的商品。</p>`;
+    : `<p class="empty">${filter === FAV ? "還沒有收藏的商品，按商品卡片上的愛心就會出現在這裡。" : "找不到符合的商品。"}</p>`;
   renderForYou();
 }
 
@@ -236,40 +278,173 @@ function similarTo(pid, n = 3) {
 }
 
 const picker = { pid: null, color: null, size: null, qty: 1 };
+const FRAMES = 24;
+const spinUrl = (key, color) => `img/spin/${key}_${color}.webp`;
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+let spin = null;
+
+function turntable(el, key, color) {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let angle = 0, velocity = 0, raf = 0, drag = null, alive = true;
+  const draw = () => {
+    const f = ((Math.round((angle / (2 * Math.PI)) * FRAMES) % FRAMES) + FRAMES) % FRAMES;
+    el.style.backgroundPosition = `${(f * 100) / (FRAMES - 1)}% 0`;
+    el.dataset.facing = Math.cos(angle) >= 0 ? "front" : "back";
+    el.dispatchEvent(new Event("turn"));
+  };
+  const stop = () => cancelAnimationFrame(raf);
+  const animate = (from, to, ms, done) => {
+    stop();
+    const t0 = performance.now();
+    const step = (now) => {
+      if (!alive) return;
+      const t = Math.min(1, (now - t0) / ms);
+      angle = from + (to - from) * easeOut(t);
+      draw();
+      if (t < 1) raf = requestAnimationFrame(step);
+      else done?.();
+    };
+    raf = requestAnimationFrame(step);
+  };
+  const coast = () => {
+    let last = performance.now();
+    const step = (now) => {
+      if (!alive) return;
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      velocity *= Math.pow(0.06, dt);
+      if (Math.abs(velocity) < 0.15) return;
+      angle += velocity * dt;
+      draw();
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  };
+  const load = (c, then) => {
+    const im = new Image();
+    im.onload = () => {
+      if (!alive) return;
+      el.style.backgroundImage = `url("${im.src}")`;
+      el.classList.add("ready");
+      draw();
+      then?.();
+    };
+    im.src = spinUrl(key, c);
+  };
+  el.addEventListener("pointerdown", (e) => {
+    stop();
+    drag = { x: e.clientX, t: performance.now(), v: 0 };
+    el.setPointerCapture(e.pointerId);
+    el.classList.add("grabbing");
+  });
+  el.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const now = performance.now();
+    const delta = ((e.clientX - drag.x) / el.clientWidth) * 2 * Math.PI * 0.9;
+    angle += delta;
+    drag.v = delta / Math.max(0.008, (now - drag.t) / 1000);
+    drag.x = e.clientX;
+    drag.t = now;
+    draw();
+  });
+  const release = () => {
+    if (!drag) return;
+    velocity = performance.now() - drag.t < 80 ? drag.v : 0;
+    drag = null;
+    el.classList.remove("grabbing");
+    if (!reduce) coast();
+  };
+  el.addEventListener("pointerup", release);
+  el.addEventListener("pointercancel", release);
+  el.addEventListener("keydown", (e) => {
+    const k = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+    if (!k) return;
+    e.preventDefault();
+    const target = (Math.round(angle / (Math.PI / 12)) + k * 2) * (Math.PI / 12);
+    reduce ? ((angle = target), draw()) : animate(angle, target, 260);
+  });
+  load(color, () => (reduce ? draw() : animate(-2 * Math.PI, 0, 1300)));
+  return {
+    setColor: (c) => load(c),
+    turnTo: (target) => {
+      const goal = angle + Math.atan2(Math.sin(target - angle), Math.cos(target - angle));
+      reduce ? ((angle = goal), draw()) : animate(angle, goal, 520);
+    },
+    destroy: () => {
+      alive = false;
+      stop();
+    },
+  };
+}
 
 function openProduct(pid) {
   const p = productById(pid);
   if (!p) return;
+  spin?.destroy();
+  spin = null;
   Object.assign(picker, { pid, color: DEFAULT_COLOR[p.key] || COLORS[0].key, size: p.sizes.length === 1 ? p.sizes[0] : null, qty: 1 });
+  const can360 = TILE_KEYS.has(p.key);
+  const points = String(p.description || "").split(/[；。]/).map((x) => x.trim()).filter(Boolean);
+  const fav = getFavs().has(p.id);
   openDialog(`
     <div class="detail">
-      <div class="detail-img"><img id="detail-img" src="${img(p.key, picker.color)}" alt="${esc(p.name)}"></div>
-      <div class="detail-also">
-        <h3>買了這個的人也買</h3>
-        <div class="mini-row">${similarTo(pid).map((s) => `<button class="mini" data-open="${s.p.id}"><img src="${img(s.p.key)}" alt=""><span>${esc(s.p.name)}</span><small>相似度 ${s.score.toFixed(2)}</small></button>`).join("")}</div>
-      </div>
-      <div class="detail-info">
-        <span class="product-cat">${esc(p.category)}・${p.id}</span>
-        <h2>${esc(p.name)}</h2>
-        <p class="detail-price">${money(p.price)}</p>
-        <p class="detail-desc">${esc(p.description || "")}</p>
-        <div class="opt"><span>顏色：<b id="color-name">${colorByKey[picker.color].name}</b></span>
+      <section class="stage-card">
+        <div class="stage-top">
+          ${can360 ? `<div class="sides" role="group" aria-label="看正反面"><button class="side-btn on" data-side-to="front">正面</button><button class="side-btn" data-side-to="back">背面</button></div>` : "<span></span>"}
+          ${heartBtn(p.id, fav)}
+        </div>
+        ${can360
+          ? `<div class="spin" id="spin" tabindex="0" role="img" aria-label="${esc(p.name)}，可拖曳旋轉"><span class="spin-hint"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>拖曳旋轉 360°</span></div>`
+          : `<div class="detail-img"><img id="detail-img" src="${img(p.key, picker.color)}" alt="${esc(p.name)}"></div>`}
+        <div class="stage-caption">
+          <h2>${esc(p.name)}<span class="dot">・</span><span id="color-name">${colorByKey[picker.color].name}</span></h2>
+          <p class="muted" id="pick-line">${esc(p.category)}・${p.id}</p>
+          <p class="detail-price">${money(p.price)}</p>
+        </div>
+      </section>
+      <section class="detail-info">
+        <div class="opt"><div class="opt-head"><h3>顏色</h3><span id="color-name-2">${colorByKey[picker.color].name}</span></div>
           <div class="swatches">${COLORS.map((c) => `<button class="swatch-btn ${c.key === picker.color ? "on" : ""}" data-color="${c.key}" style="--c:${c.hex}" aria-label="${c.name}" title="${c.name}"></button>`).join("")}</div></div>
-        <div class="opt"><span>尺寸</span>
+        <div class="opt"><div class="opt-head"><h3>尺寸</h3><span id="size-name">${picker.size ? esc(picker.size) : "請選擇"}</span></div>
           <div class="sizes">${p.sizes.map((s) => `<button class="size-btn ${s === picker.size ? "on" : ""}" data-size="${esc(s)}">${esc(s)}</button>`).join("")}</div></div>
-        <div class="opt row"><span>數量</span><div class="qty"><button data-q="-1" aria-label="減少">−</button><span id="pick-qty">1</span><button data-q="1" aria-label="增加">+</button></div></div>
-        <p class="form-msg" id="pick-msg"></p>
-        <button class="btn wide" id="pick-add">加入購物車</button>
-      </div>
-    </div>`, "wide");
+        ${points.length ? `<div class="opt"><div class="opt-head"><h3>商品特色</h3></div><ul class="points">${points.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+        <div class="buy">
+          <div class="buy-row"><span class="buy-label">數量</span><div class="qty"><button data-q="-1" aria-label="減少">−</button><span id="pick-qty">1</span><button data-q="1" aria-label="增加">+</button></div>
+            <span class="buy-sub">小計 <strong id="pick-sub">${money(p.price)}</strong></span></div>
+          <p class="form-msg" id="pick-msg"></p>
+          <button class="btn wide go" id="pick-add">加入購物車<span class="go-arrow" aria-hidden="true">→</span></button>
+        </div>
+        <div class="detail-also">
+          <h3>買了這個的人也買</h3>
+          <div class="mini-row">${similarTo(pid).map((s) => `<button class="mini" data-open="${s.p.id}"><img src="${img(s.p.key)}" alt=""><span>${esc(s.p.name)}</span><small>相似度 ${s.score.toFixed(2)}</small></button>`).join("")}</div>
+        </div>
+      </section>
+    </div>`, "wide product-dialog");
+  if (can360) {
+    const el = $("spin");
+    spin = turntable(el, p.key, picker.color);
+    el.addEventListener("turn", () => document.querySelectorAll(".side-btn").forEach((b) => b.classList.toggle("on", b.dataset.sideTo === el.dataset.facing)));
+  }
+  const updateLine = () => {
+    $("size-name").textContent = picker.size || "請選擇";
+    $("pick-line").textContent = `${p.category}・${p.id}${picker.size ? `・${picker.size}` : ""}${picker.qty > 1 ? `・×${picker.qty}` : ""}`;
+    $("pick-sub").textContent = money(p.price * picker.qty);
+  };
   $("dialog-body").onclick = (e) => {
     const c = e.target.closest("[data-color]");
     const s = e.target.closest("[data-size]");
     const q = e.target.closest("[data-q]");
+    const side = e.target.closest("[data-side-to]");
+    if (side && spin) spin.turnTo(side.dataset.sideTo === "front" ? 0 : Math.PI);
     if (c) {
       picker.color = c.dataset.color;
-      $("detail-img").src = img(p.key, picker.color);
-      $("color-name").textContent = colorByKey[picker.color].name;
+      if (spin) spin.setColor(picker.color);
+      else {
+        const im = $("detail-img");
+        im.classList.add("swap");
+        setTimeout(() => { im.src = img(p.key, picker.color); im.classList.remove("swap"); }, 150);
+      }
+      $("color-name").textContent = $("color-name-2").textContent = colorByKey[picker.color].name;
       document.querySelectorAll(".swatch-btn").forEach((b) => b.classList.toggle("on", b === c));
     }
     if (s) {
@@ -281,9 +456,13 @@ function openProduct(pid) {
       picker.qty = Math.min(20, Math.max(1, picker.qty + Number(q.dataset.q)));
       $("pick-qty").textContent = picker.qty;
     }
-    if (e.target.id === "pick-add") {
+    if (s || q) updateLine();
+    if (e.target.closest("#pick-add")) {
       if (!picker.size) {
         $("pick-msg").textContent = "請先選尺寸。";
+        document.querySelector(".sizes")?.classList.remove("shake");
+        void document.querySelector(".sizes")?.offsetWidth;
+        document.querySelector(".sizes")?.classList.add("shake");
         return;
       }
       addToCart(picker.pid, picker.color, picker.size, picker.qty);
@@ -291,6 +470,10 @@ function openProduct(pid) {
     }
   };
 }
+$("dialog").addEventListener("close", () => {
+  spin?.destroy();
+  spin = null;
+});
 
 document.addEventListener("click", (e) => {
   const open = e.target.closest("[data-open]");
@@ -392,7 +575,7 @@ $("checkout").addEventListener("click", () => {
       <label class="full">備註<input name="note" maxlength="80" placeholder="選填"></label>
       <div class="sum-line"><span>共 ${lines.reduce((s, l) => s + l.qty, 0)} 件</span><strong>應付 ${money(sub + shippingOf(sub))}</strong></div>
       <p class="form-msg" id="form-msg"></p>
-      <div class="actions end"><button type="button" class="ghost" id="form-cancel">返回</button><button class="btn" type="submit">確認下單</button></div>
+      <div class="actions end"><button type="button" class="ghost" id="form-cancel">返回</button><button class="btn go" type="submit">確認下單<span class="go-arrow" aria-hidden="true">→</span></button></div>
     </form>`);
   $("form-cancel").onclick = closeDialog;
   $("checkout-form").onsubmit = submitOrder;
