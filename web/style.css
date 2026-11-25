@@ -609,3 +609,25 @@ select, input[type="search"], .form input, .form select, .form textarea { border
 .stage-view { position: relative; }
 .stage-view .detail-img { width: 100%; }
 .stage-view .heart { position: absolute; top: 12px; right: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, .12); }
+.block > h2::before, .block-head h2::before, .form > h2::before, .order-detail > h2::before { content: ""; display: inline-block; width: 4px; height: .95em; border-radius: 2px; background: var(--price); margin-right: 10px; vertical-align: -2px; }
+.sum dd.total, .sum-line strong { color: var(--price); }
+.cart-item img { width: 56px; height: 56px; border-radius: 10px; }
+.order-detail .cart-item img { width: 44px; height: 44px; }
+.qty { border-radius: 999px; overflow: hidden; }
+.qty button:hover { background: var(--accent-soft); color: var(--accent); }
+.foot a { color: var(--accent); text-underline-offset: 3px; }
+.grid-form .span-2 { grid-column: 1 / -1; }
+.pay { gap: 10px; }
+.pay-option { cursor: pointer; }
+.pay-option input { position: absolute; opacity: 0; pointer-events: none; }
+.pay-option span { display: inline-block; padding: 7px 16px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 14px; transition: border-color .2s ease, background .2s ease, color .2s ease; }
+.pay-option:hover span { border-color: var(--price); }
+.pay-option input:checked + span { border-color: var(--price); background: var(--accent-soft); color: var(--accent); font-weight: 700; box-shadow: 0 0 0 1px var(--price); }
+.pay-option input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.done { text-align: center; padding-top: 6px; }
+.done-icon { width: 56px; height: 56px; margin: 0 auto 10px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--price); box-shadow: 0 0 0 6px var(--accent-soft); animation: pop-in .35s cubic-bezier(.3, 1.5, .5, 1); }
+@keyframes pop-in { from { transform: scale(.6); opacity: 0; } }
+.done .actions.end { justify-content: center; }
+@media (prefers-reduced-motion: reduce) { .done-icon { animation: none; } .pay-option span { transition: none; } }
+.toast { width: max-content; max-width: calc(100vw - 32px); }
+@media (max-width: 600px) { .toast.has-action { gap: 10px; font-size: 13px; } }

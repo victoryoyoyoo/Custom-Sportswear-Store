@@ -450,10 +450,10 @@ $("checkout").addEventListener("click", () => {
       <div class="grid-form">
         <label>手機<input name="phone" value="${esc(c?.phone)}" placeholder="0912-345-678" required></label>
         <label>縣市<select name="city">${CITIES.map((x) => `<option ${x === c?.city ? "selected" : ""}>${x}</option>`).join("")}</select></label>
-        <label>地址<input name="address" value="${esc(last?.address || "")}" placeholder="路名、門牌號碼" required maxlength="60"></label>
+        <label class="span-2">地址<input name="address" value="${esc(last?.address || "")}" placeholder="路名、門牌號碼" required maxlength="60"></label>
       </div>
       <fieldset class="pay"><legend>付款方式</legend>
-        ${["信用卡", "貨到付款", "ATM 轉帳"].map((x, i) => `<label><input type="radio" name="payment" value="${x}" ${i === 0 ? "checked" : ""}>${x}</label>`).join("")}
+        ${["信用卡", "貨到付款", "ATM 轉帳"].map((x, i) => `<label class="pay-option"><input type="radio" name="payment" value="${x}" ${i === 0 ? "checked" : ""}><span>${x}</span></label>`).join("")}
       </fieldset>
       <label class="full">備註<input name="note" maxlength="80" placeholder="選填"></label>
       <div class="sum-line"><span>共 ${lines.reduce((s, l) => s + l.qty, 0)} 件</span><strong>應付 ${money(sub + shippingOf(sub))}</strong></div>
@@ -489,6 +489,7 @@ async function submitOrder(e) {
     const sub = orderTotal(order);
     openDialog(`
       <div class="done">
+        <div class="done-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="28" height="28"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <h2>訂單已成立</h2>
         <p>訂單編號 <b>${order.id}</b>，應付 ${money(sub + shippingOf(sub))}（${esc(order.payment)}）。</p>
         <p class="muted">出貨後狀態會更新，可以在「我的訂單」查看。</p>
@@ -591,7 +592,7 @@ function openOrder(id) {
         <dt>付款</dt><dd>${esc(o.payment)}</dd>${o.note ? `<dt>備註</dt><dd>${esc(o.note)}</dd>` : ""}
       </dl>
       <table class="table"><thead><tr><th>商品</th><th>顏色／尺寸</th><th class="num">單價</th><th class="num">數量</th><th class="num">小計</th></tr></thead><tbody>
-        ${o.items.map((i) => `<tr><td>${esc(productById(i.product)?.name || i.product)}</td><td>${colorByKey[i.color]?.name || i.color}／${esc(i.size)}</td><td class="num">${money(i.price)}</td><td class="num">${i.qty}</td><td class="num">${money(i.price * i.qty)}</td></tr>`).join("")}
+        ${o.items.map((i) => `<tr><td><div class="cart-item">${productById(i.product) ? `<img src="${img(productById(i.product).key, i.color)}" alt="">` : ""}<span>${esc(productById(i.product)?.name || i.product)}</span></div></td><td>${colorByKey[i.color]?.name || i.color}／${esc(i.size)}</td><td class="num">${money(i.price)}</td><td class="num">${i.qty}</td><td class="num">${money(i.price * i.qty)}</td></tr>`).join("")}
       </tbody></table>
       <dl class="sum"><dt>商品金額</dt><dd>${money(sub)}</dd><dt>運費</dt><dd>${shippingOf(sub) ? money(shippingOf(sub)) : "免運"}</dd><dt class="total">總計</dt><dd class="total">${money(sub + shippingOf(sub))}</dd></dl>
       ${document.body.dataset.side === "back" ? `<div class="actions between">
