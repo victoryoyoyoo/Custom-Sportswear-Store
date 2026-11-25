@@ -35,13 +35,13 @@ LEFT JOIN 訂單 ON 訂單.訂單編號 = 訂單明細.訂單編號
 GROUP BY 商品.商品編號, 商品.商品名稱, 分類.分類名稱;
 GO
 
--- 隱藏個資的顧客檢視表：給客服看，不顯示電子郵件和手機（ch10 隱藏欄位）
+-- 隱藏個資的顧客檢視表：給客服看，不顯示電子郵件和手機
 CREATE OR ALTER VIEW 顧客公開資料檢視 AS
 SELECT 顧客編號, 縣市, 加入日期
 FROM 顧客;
 GO
 
--- 熱銷商品前五名（ch10 TOP＋JOIN）
+-- 熱銷商品前五名（TOP＋JOIN）
 CREATE OR ALTER VIEW 熱銷商品前五名檢視 AS
 SELECT TOP 5 商品.商品編號, 商品.商品名稱, 分類.分類名稱, SUM(訂單明細.數量) AS 銷售件數
 FROM 訂單明細
@@ -53,7 +53,7 @@ GROUP BY 商品.商品編號, 商品.商品名稱, 分類.分類名稱
 ORDER BY 銷售件數 DESC;
 GO
 
--- 上架商品：只來自一張表，可以透過它新增、修改（ch10 INSERT／UPDATE VIEW）
+-- 上架商品：只來自一張表，可以透過它新增、修改
 -- WITH CHECK OPTION：透過檢視表改的資料，改完一定還要符合「上架 = 1」
 CREATE OR ALTER VIEW 上架商品檢視 AS
 SELECT 商品編號, 商品名稱, 分類編號, 定價, 圖片代碼, 說明, 上架
