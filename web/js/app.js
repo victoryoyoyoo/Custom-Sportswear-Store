@@ -32,7 +32,8 @@ const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const colorByKey = Object.fromEntries(COLORS.map((c) => [c.key, c]));
 const img = (key, color) => `img/p/${key}_${color || DEFAULT_COLOR[key]}.webp`;
 const TILE_KEYS = new Set(["jersey", "tee", "hoodie", "shorts", "socks", "sneaker", "backpack", "bottle", "towel", "headband", "wristband"]);
-const tileImg = (p) => (TILE_KEYS.has(p.key) ? `img/p/${p.key}_tile.webp` : img(p.key));
+const PAIR = { jersey: "navy", tee: "sunset", hoodie: "crimson", shorts: "onyx", socks: "crimson", sneaker: "royal", backpack: "navy", bottle: "indigo", towel: "sand", headband: "onyx", wristband: "sunset" };
+const pairImgs = (p) => (PAIR[p.key] ? [img(p.key), img(p.key, PAIR[p.key])] : [img(p.key)]);
 const TAGLINES = {
   jersey: "印上姓名與背號，即時預覽", tee: "棉感排汗布，胸前可印字", hoodie: "內刷毛保暖，袋鼠口袋",
   shorts: "側邊撞色條，可印背號", socks: "毛巾底，加厚緩衝", sneaker: "高筒包覆，EU 38–46",
@@ -240,7 +241,7 @@ function renderShop() {
   $("product-grid").innerHTML = list.length
     ? list.map((p) => `
       <article class="product">
-        <button class="product-img" data-open="${p.id}" aria-label="查看${esc(p.name)}"><img src="${tileImg(p)}" alt="${esc(p.name)}" loading="lazy"></button>
+        <button class="product-img pair" data-open="${p.id}" aria-label="查看${esc(p.name)}">${pairImgs(p).map((src, i) => `<img src="${src}" alt="${i ? "" : esc(p.name)}" loading="lazy">`).join("")}</button>
         <div class="product-body">
           <div class="product-head"><h3><button class="link" data-open="${p.id}">${esc(p.name)}</button></h3><strong class="price">${money(p.price)}</strong></div>
           <p class="tagline">${esc(taglineOf(p))}</p>
@@ -282,6 +283,8 @@ function similarTo(pid, n = 3) {
 const picker = { pid: null, color: null, size: null, qty: 1 };
 const FRAMES = 24;
 const spinUrl = (key, color) => `img/spin/${key}_${color}.webp`;
+const SPIN_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const PHOTO_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1.8" fill="currentColor"/><path d="M21 16l-5-5-8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 let spin = null;
 
@@ -392,12 +395,14 @@ function openProduct(pid) {
     <div class="detail">
       <section class="stage-card">
         <div class="stage-top">
-          ${can360 ? `<div class="sides" role="group" aria-label="看正反面"><button class="side-btn on" data-side-to="front">正面</button><button class="side-btn" data-side-to="back">背面</button></div>` : "<span></span>"}
+          ${can360 ? `<div class="sides" role="group" aria-label="看正反面" hidden><button class="side-btn on" data-side-to="front">正面</button><button class="side-btn" data-side-to="back">背面</button></div>` : ""}<span class="stage-label" id="stage-label">${can360 ? "商品照片" : ""}</span>
           ${heartBtn(p.id, fav)}
         </div>
-        ${can360
-          ? `<div class="spin" id="spin" tabindex="0" role="img" aria-label="${esc(p.name)}，可拖曳旋轉"><span class="spin-hint"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>拖曳旋轉 360°</span></div>`
-          : `<div class="detail-img"><img id="detail-img" src="${img(p.key, picker.color)}" alt="${esc(p.name)}"></div>`}
+        <div class="stage-view">
+          <div class="detail-img" id="photo-view"><img id="detail-img" src="${img(p.key, picker.color)}" alt="${esc(p.name)}"></div>
+          ${can360 ? `<div class="spin" id="spin" tabindex="0" role="img" aria-label="${esc(p.name)}，可拖曳旋轉" hidden><span class="spin-hint">左右拖曳轉動</span></div>
+          <button class="view-toggle" id="view-toggle" data-view="spin">${SPIN_ICON}360° 旋轉</button>` : ""}
+        </div>
         <div class="stage-caption">
           <h2>${esc(p.name)}<span class="dot">・</span><span id="color-name">${colorByKey[picker.color].name}</span></h2>
           <p class="muted" id="pick-line">${esc(p.category)}・${p.id}</p>
@@ -422,11 +427,22 @@ function openProduct(pid) {
         </div>
       </section>
     </div>`, "wide product-dialog");
-  if (can360) {
-    const el = $("spin");
-    spin = turntable(el, p.key, picker.color);
-    el.addEventListener("turn", () => document.querySelectorAll(".side-btn").forEach((b) => b.classList.toggle("on", b.dataset.sideTo === el.dataset.facing)));
-  }
+  const showView = (view) => {
+    const toSpin = view === "spin";
+    $("photo-view").hidden = toSpin;
+    $("spin").hidden = !toSpin;
+    document.querySelector(".sides").hidden = !toSpin;
+    $("stage-label").textContent = toSpin ? "" : "商品照片";
+    const t = $("view-toggle");
+    t.dataset.view = toSpin ? "photo" : "spin";
+    t.innerHTML = toSpin ? `${PHOTO_ICON}看照片` : `${SPIN_ICON}360° 旋轉`;
+    if (toSpin && !spin) {
+      const el = $("spin");
+      spin = turntable(el, p.key, picker.color);
+      el.addEventListener("turn", () => document.querySelectorAll(".side-btn").forEach((b) => b.classList.toggle("on", b.dataset.sideTo === el.dataset.facing)));
+    }
+    if (toSpin) $("spin").focus({ preventScroll: true });
+  };
   const updateLine = () => {
     $("size-name").textContent = picker.size || "請選擇";
     $("pick-line").textContent = `${p.category}・${p.id}${picker.size ? `・${picker.size}` : ""}${picker.qty > 1 ? `・×${picker.qty}` : ""}`;
@@ -438,14 +454,14 @@ function openProduct(pid) {
     const q = e.target.closest("[data-q]");
     const side = e.target.closest("[data-side-to]");
     if (side && spin) spin.turnTo(side.dataset.sideTo === "front" ? 0 : Math.PI);
+    const view = e.target.closest("[data-view]");
+    if (view) showView(view.dataset.view);
     if (c) {
       picker.color = c.dataset.color;
       if (spin) spin.setColor(picker.color);
-      else {
-        const im = $("detail-img");
-        im.classList.add("swap");
-        setTimeout(() => { im.src = img(p.key, picker.color); im.classList.remove("swap"); }, 150);
-      }
+      const im = $("detail-img");
+      im.classList.add("swap");
+      setTimeout(() => { im.src = img(p.key, picker.color); im.classList.remove("swap"); }, 150);
       $("color-name").textContent = $("color-name-2").textContent = colorByKey[picker.color].name;
       document.querySelectorAll(".swatch-btn").forEach((b) => b.classList.toggle("on", b === c));
     }

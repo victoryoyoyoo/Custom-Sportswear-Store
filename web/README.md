@@ -35,7 +35,8 @@
 ## 檔案
 
 - `index.html`、`style.css`、`js/`：網頁（`store.js` 決定資料來自 SQL Server 還是示範資料）
-- `img/p/`、`img/spin/`：商品圖與 360° 旋轉圖，由原本 C++ 版商店的繪圖程式輸出（每個商品 12 色 × 24 個角度）
+- `img/p/`：商品圖（11 種商品 × 12 色）
+- `img/spin/`：360° 旋轉圖，由原本 C++ 版商店的繪圖程式輸出（每個商品 12 色 × 24 個角度）
 - `server/`：C# ASP.NET Core 伺服器，`ShopRepository.cs` 放所有 SQL
 - `database/`：建表、資料、6 個檢視表、查詢範例、新增修改刪除與檢視表操作、正規化、ER 圖
 - `data/`：CSV、網頁用的 `data.js`、真實資料 `real.js`
