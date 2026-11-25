@@ -52,7 +52,8 @@ TYPES = {
 }
 
 SURNAMES = list("陳林黃張李王吳劉蔡楊許鄭謝郭洪曾邱廖賴周徐蘇葉莊呂江何蕭羅高")
-GIVEN = list("子宇承恩柏翰品妤欣怡家豪冠廷宥辰雅婷俊傑思穎佳蓉育誠詠晴志明書瑋嘉玲博文")
+FIRST = list("子宇承柏品欣家冠宥雅俊思佳育詠志書嘉博彥浩怡晨依語宏建凱哲婉美郁筱芷庭昱")
+SECOND = list("恩翰妤豪廷辰婷傑穎蓉誠晴明瑋玲涵軒安琪萱華倫儒蓁璇維賢瑜潔儀妍君霖祥銘翔")
 CITIES = ["台北市", "新北市", "桃園市", "台中市", "台南市", "高雄市", "新竹市", "基隆市", "嘉義市", "宜蘭縣"]
 PAYMENTS = ["信用卡", "貨到付款", "ATM 轉帳"]
 
@@ -71,7 +72,9 @@ for c in range(n_customers):
     theme = str(rng.choice(list(THEMES), p=[0.45, 0.35, 0.2]))
     cid = f"C{c + 1:03d}"
     while True:
-        name = rng.choice(SURNAMES) + "".join(rng.choice(GIVEN, size=2))
+        surname = rng.choice(SURNAMES)
+        first, second = rng.choice(len(FIRST), size=2)
+        name = surname + FIRST[first] + SECOND[second]
         if name not in used_names:
             used_names.add(name)
             break
