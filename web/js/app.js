@@ -31,7 +31,6 @@ const shiftDate = (d, n) => new Date(new Date(d).getTime() + n * DAY).toISOStrin
 const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const colorByKey = Object.fromEntries(COLORS.map((c) => [c.key, c]));
 const img = (key, color) => `img/p/${key}_${color || DEFAULT_COLOR[key]}.webp`;
-const TILE_KEYS = new Set(["jersey", "tee", "hoodie", "shorts", "socks", "sneaker", "backpack", "bottle", "towel", "headband", "wristband"]);
 const PAIR = { jersey: "navy", tee: "sunset", hoodie: "crimson", shorts: "onyx", socks: "crimson", sneaker: "royal", backpack: "navy", bottle: "indigo", towel: "sand", headband: "onyx", wristband: "sunset" };
 const pairImgs = (p) => (PAIR[p.key] ? [img(p.key), img(p.key, PAIR[p.key])] : [img(p.key)]);
 const TAGLINES = {
@@ -281,127 +280,18 @@ function similarTo(pid, n = 3) {
 }
 
 const picker = { pid: null, color: null, size: null, qty: 1 };
-const FRAMES = 24;
-const spinUrl = (key, color) => `img/spin/${key}_${color}.webp`;
-const SPIN_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const PHOTO_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1.8" fill="currentColor"/><path d="M21 16l-5-5-8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
-const easeOut = (t) => 1 - Math.pow(1 - t, 3);
-let spin = null;
-
-function turntable(el, key, color) {
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let angle = 0, velocity = 0, raf = 0, drag = null, alive = true;
-  const draw = () => {
-    const f = ((Math.round((angle / (2 * Math.PI)) * FRAMES) % FRAMES) + FRAMES) % FRAMES;
-    el.style.backgroundPosition = `${(f * 100) / (FRAMES - 1)}% 0`;
-    el.dataset.facing = Math.cos(angle) >= 0 ? "front" : "back";
-    el.dispatchEvent(new Event("turn"));
-  };
-  const stop = () => cancelAnimationFrame(raf);
-  const animate = (from, to, ms, done) => {
-    stop();
-    const t0 = performance.now();
-    const step = (now) => {
-      if (!alive) return;
-      const t = Math.min(1, (now - t0) / ms);
-      angle = from + (to - from) * easeOut(t);
-      draw();
-      if (t < 1) raf = requestAnimationFrame(step);
-      else done?.();
-    };
-    raf = requestAnimationFrame(step);
-  };
-  const coast = () => {
-    let last = performance.now();
-    const step = (now) => {
-      if (!alive) return;
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      velocity *= Math.pow(0.06, dt);
-      if (Math.abs(velocity) < 0.15) return;
-      angle += velocity * dt;
-      draw();
-      raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-  };
-  const load = (c, then) => {
-    const im = new Image();
-    im.onload = () => {
-      if (!alive) return;
-      el.style.backgroundImage = `url("${im.src}")`;
-      el.classList.add("ready");
-      draw();
-      then?.();
-    };
-    im.src = spinUrl(key, c);
-  };
-  el.addEventListener("pointerdown", (e) => {
-    stop();
-    drag = { x: e.clientX, t: performance.now(), v: 0 };
-    el.setPointerCapture(e.pointerId);
-    el.classList.add("grabbing");
-  });
-  el.addEventListener("pointermove", (e) => {
-    if (!drag) return;
-    const now = performance.now();
-    const delta = ((e.clientX - drag.x) / el.clientWidth) * 2 * Math.PI * 0.9;
-    angle += delta;
-    drag.v = delta / Math.max(0.008, (now - drag.t) / 1000);
-    drag.x = e.clientX;
-    drag.t = now;
-    draw();
-  });
-  const release = () => {
-    if (!drag) return;
-    velocity = performance.now() - drag.t < 80 ? drag.v : 0;
-    drag = null;
-    el.classList.remove("grabbing");
-    if (!reduce) coast();
-  };
-  el.addEventListener("pointerup", release);
-  el.addEventListener("pointercancel", release);
-  el.addEventListener("keydown", (e) => {
-    const k = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
-    if (!k) return;
-    e.preventDefault();
-    const target = (Math.round(angle / (Math.PI / 12)) + k * 2) * (Math.PI / 12);
-    reduce ? ((angle = target), draw()) : animate(angle, target, 260);
-  });
-  load(color, () => (reduce ? draw() : animate(-2 * Math.PI, 0, 1300)));
-  return {
-    setColor: (c) => load(c),
-    turnTo: (target) => {
-      const goal = angle + Math.atan2(Math.sin(target - angle), Math.cos(target - angle));
-      reduce ? ((angle = goal), draw()) : animate(angle, goal, 520);
-    },
-    destroy: () => {
-      alive = false;
-      stop();
-    },
-  };
-}
-
 function openProduct(pid) {
   const p = productById(pid);
   if (!p) return;
-  spin?.destroy();
-  spin = null;
   Object.assign(picker, { pid, color: DEFAULT_COLOR[p.key] || COLORS[0].key, size: p.sizes.length === 1 ? p.sizes[0] : null, qty: 1 });
-  const can360 = TILE_KEYS.has(p.key);
   const points = String(p.description || "").split(/[；。]/).map((x) => x.trim()).filter(Boolean);
   const fav = getFavs().has(p.id);
   openDialog(`
     <div class="detail">
       <section class="stage-card">
-        <div class="stage-top">
-          ${can360 ? `<div class="sides" role="group" aria-label="看正反面" hidden><button class="side-btn on" data-side-to="front">正面</button><button class="side-btn" data-side-to="back">背面</button></div>` : ""}<span class="stage-label" id="stage-label">${can360 ? "商品照片" : ""}</span>
-          ${heartBtn(p.id, fav)}
-        </div>
         <div class="stage-view">
-          <div class="detail-img" id="photo-view"><img id="detail-img" src="${img(p.key, picker.color)}" alt="${esc(p.name)}"></div>
-          ${can360 ? `<div class="spin" id="spin" tabindex="0" role="img" aria-label="${esc(p.name)}，可拖曳旋轉" hidden><span class="spin-hint">左右拖曳轉動</span></div>
-          <button class="view-toggle" id="view-toggle" data-view="spin">${SPIN_ICON}360° 旋轉</button>` : ""}
+          <div class="detail-img"><img id="detail-img" src="${img(p.key, picker.color)}" alt="${esc(p.name)}"></div>
+          ${heartBtn(p.id, fav)}
         </div>
         <div class="stage-caption">
           <h2>${esc(p.name)}<span class="dot">・</span><span id="color-name">${colorByKey[picker.color].name}</span></h2>
@@ -427,22 +317,6 @@ function openProduct(pid) {
         </div>
       </section>
     </div>`, "wide product-dialog");
-  const showView = (view) => {
-    const toSpin = view === "spin";
-    $("photo-view").hidden = toSpin;
-    $("spin").hidden = !toSpin;
-    document.querySelector(".sides").hidden = !toSpin;
-    $("stage-label").textContent = toSpin ? "" : "商品照片";
-    const t = $("view-toggle");
-    t.dataset.view = toSpin ? "photo" : "spin";
-    t.innerHTML = toSpin ? `${PHOTO_ICON}看照片` : `${SPIN_ICON}360° 旋轉`;
-    if (toSpin && !spin) {
-      const el = $("spin");
-      spin = turntable(el, p.key, picker.color);
-      el.addEventListener("turn", () => document.querySelectorAll(".side-btn").forEach((b) => b.classList.toggle("on", b.dataset.sideTo === el.dataset.facing)));
-    }
-    if (toSpin) $("spin").focus({ preventScroll: true });
-  };
   const updateLine = () => {
     $("size-name").textContent = picker.size || "請選擇";
     $("pick-line").textContent = `${p.category}・${p.id}${picker.size ? `・${picker.size}` : ""}${picker.qty > 1 ? `・×${picker.qty}` : ""}`;
@@ -452,13 +326,8 @@ function openProduct(pid) {
     const c = e.target.closest("[data-color]");
     const s = e.target.closest("[data-size]");
     const q = e.target.closest("[data-q]");
-    const side = e.target.closest("[data-side-to]");
-    if (side && spin) spin.turnTo(side.dataset.sideTo === "front" ? 0 : Math.PI);
-    const view = e.target.closest("[data-view]");
-    if (view) showView(view.dataset.view);
     if (c) {
       picker.color = c.dataset.color;
-      if (spin) spin.setColor(picker.color);
       const im = $("detail-img");
       im.classList.add("swap");
       setTimeout(() => { im.src = img(p.key, picker.color); im.classList.remove("swap"); }, 150);
@@ -488,10 +357,6 @@ function openProduct(pid) {
     }
   };
 }
-$("dialog").addEventListener("close", () => {
-  spin?.destroy();
-  spin = null;
-});
 
 document.addEventListener("click", (e) => {
   const open = e.target.closest("[data-open]");
@@ -1310,7 +1175,7 @@ const setSource = (src) => {
 };
 const DEMO = [
   ["商品頁：3D 商品、收藏", () => { filter = "全部"; showTab("shop"); }],
-  ["籃球鞋：360° 旋轉、也買推薦", () => { showTab("shop"); openProduct("P06"); }],
+  ["籃球鞋：顏色尺寸、也買推薦", () => { showTab("shop"); openProduct("P06"); }],
   ["購物車與結帳", () => showTab("cart")],
   ["我的訂單", () => showTab("mine")],
   ["後台：訂單管理與營收", () => showTab("orders")],

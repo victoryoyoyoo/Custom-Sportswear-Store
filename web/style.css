@@ -511,15 +511,6 @@ dialog.product-dialog { width: min(1040px, calc(100vw - 32px)); background: var(
 .product-dialog .detail { display: grid; grid-template-columns: 1fr 1.15fr; grid-template-areas: none; grid-template-rows: auto; gap: 18px; align-items: start; }
 .stage-card, .product-dialog .detail-info { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 0 0 4px var(--ring); padding: 16px; }
 .stage-card { position: sticky; top: 0; }
-.stage-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.sides { display: flex; gap: 8px; }
-.side-btn { font: inherit; font-size: 14px; font-weight: 700; padding: 5px 16px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); cursor: pointer; transition: all .2s ease; }
-.side-btn.on { border-color: var(--price); color: var(--accent); background: var(--accent-soft); }
-.spin { position: relative; aspect-ratio: 1 / 1; border-radius: 12px; background-color: var(--stage); background-size: 2400% 100%; background-repeat: no-repeat; cursor: grab; touch-action: pan-y; opacity: 0; transition: opacity .3s ease; outline: none; }
-.spin.ready { opacity: 1; }
-.spin.grabbing { cursor: grabbing; }
-.spin:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
-.spin-hint { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #4b5565; background: rgba(255, 255, 255, .92); border-radius: 999px; padding: 4px 12px; box-shadow: 0 1px 4px rgba(0, 0, 0, .08); pointer-events: none; white-space: nowrap; }
 .stage-caption { text-align: center; padding: 12px 4px 4px; }
 .stage-caption h2 { font-size: 20px; margin: 0; }
 .stage-caption .dot { color: var(--muted); margin: 0 2px; }
@@ -579,7 +570,6 @@ dialog.product-dialog { width: min(1040px, calc(100vw - 32px)); background: var(
   .product:hover { border-color: #8a4a26; }
   .eyebrow { border-color: #6b3a1f; }
   .heart.on { background: #3a1d1f; border-color: #7a3337; }
-  .spin-hint { background: rgba(255, 255, 255, .92); }
 }
 @media (max-width: 600px) {
   #category-filter { flex-wrap: nowrap; overflow-x: auto; width: 100%; padding: 2px 2px 6px; scrollbar-width: none; }
@@ -618,10 +608,4 @@ select, input[type="search"], .form input, .form select, .form textarea { border
 .product-img.pair img:only-child { grid-column: 1 / -1; aspect-ratio: auto; }
 .stage-view { position: relative; }
 .stage-view .detail-img { width: 100%; }
-.stage-label { font-size: 13px; color: var(--muted); }
-.stage-top { min-height: 36px; }
-.view-toggle { position: absolute; right: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 700; color: var(--accent); background: rgba(255, 255, 255, .95); border: 1px solid #f7c7a8; border-radius: 999px; padding: 6px 14px; cursor: pointer; box-shadow: 0 2px 8px rgba(0, 0, 0, .12); transition: background .2s ease, transform .15s ease; }
-.view-toggle:hover { background: #fff3ea; transform: translateY(-1px); }
-.spin[hidden], .detail-img[hidden], .sides[hidden] { display: none; }
-.spin-hint { left: 14px; transform: none; }
-@media (prefers-reduced-motion: reduce) { .view-toggle { transition: none; } }
+.stage-view .heart { position: absolute; top: 12px; right: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, .12); }
