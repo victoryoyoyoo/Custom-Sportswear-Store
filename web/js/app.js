@@ -94,7 +94,7 @@ function showTab(name) {
   const side = document.querySelector(`.nav-item[data-tab="${name}"]`)?.dataset.side || "front";
   document.body.dataset.side = side;
   $("side-switch").textContent = side === "front" ? "進入後台" : "回到商店";
-  $("who-label").textContent = side === "front" ? "示範登入" : "查看顧客";
+  $("who-label").textContent = side === "front" ? "目前顧客" : "查看顧客";
   $("who").classList.toggle("off", side === "back" && !["segments", "churn"].includes(name));
   document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.tab === name));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === name));
