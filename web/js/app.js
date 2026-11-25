@@ -94,7 +94,7 @@ function showTab(name) {
   const side = document.querySelector(`.nav-item[data-tab="${name}"]`)?.dataset.side || "front";
   document.body.dataset.side = side;
   $("side-switch").textContent = side === "front" ? "進入後台" : "回到商店";
-  $("who-label").textContent = side === "front" ? "目前顧客" : "查看顧客";
+  closeAccountMenu();
   $("who").classList.toggle("off", side === "back" && !["segments", "churn"].includes(name));
   document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.tab === name));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === name));
@@ -128,6 +128,105 @@ customerSelect.addEventListener("change", () => {
   renderTab(currentTab());
 });
 const me = () => customerSelect.value;
+
+let account = local.get("shop_account", "C001");
+const user = () => account;
+const personSvg = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4.8 19.5c1.2-3.4 4-5.2 7.2-5.2s6 1.8 7.2 5.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+function setAccount(id) {
+  account = id;
+  local.set("shop_account", id);
+  if (id && customerSelect.value !== id) {
+    customerSelect.value = id;
+    local.set("shop_customer", id);
+    Object.keys(drawn).forEach((k) => (drawn[k] = false));
+  }
+  renderAccount();
+  renderTab(currentTab());
+}
+function renderAccount() {
+  const btn = $("account-btn");
+  const c = account && customerById(account);
+  btn.classList.toggle("signed-in", !!c);
+  btn.setAttribute("aria-label", c ? `帳號 ${c.id}` : "登入");
+  btn.innerHTML = c
+    ? `<span class="avatar">${personSvg}</span><span>${c.id}</span><svg class="caret" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : `<span class="avatar">${personSvg}</span><span>登入</span>`;
+  $("account-menu").innerHTML = c
+    ? `<div class="account-head"><strong>${c.id}</strong><small>${esc(c.email)}</small></div>
+       <button role="menuitem" data-acc="mine">我的訂單</button>
+       <button role="menuitem" data-acc="fav">我的收藏</button>
+       <button role="menuitem" data-acc="switch">切換帳號</button>
+       <button role="menuitem" data-acc="out" class="out">登出</button>`
+    : "";
+}
+function closeAccountMenu() {
+  $("account-menu").hidden = true;
+  $("account-btn").setAttribute("aria-expanded", "false");
+}
+$("account-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (!account) return openLogin();
+  const open = $("account-menu").hidden;
+  $("account-menu").hidden = !open;
+  $("account-btn").setAttribute("aria-expanded", String(open));
+});
+$("account-menu").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-acc]");
+  if (!b) return;
+  closeAccountMenu();
+  const act = b.dataset.acc;
+  if (act === "mine") showTab("mine");
+  if (act === "fav") { filter = FAV; showTab("shop"); }
+  if (act === "switch") openLogin();
+  if (act === "out") { setAccount(null); toast("已登出"); }
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#account")) closeAccountMenu();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeAccountMenu();
+});
+const QUICK_ACCOUNTS = ["C001", "C208", "C015"];
+function openLogin(next) {
+  const quick = QUICK_ACCOUNTS.map(customerById).filter(Boolean);
+  openDialog(`
+    <form class="form login" id="login-form" novalidate>
+      <h2>登入</h2>
+      <p class="muted">登入後可以結帳、看自己的訂單，收藏也會幫你記住。</p>
+      <label>Email 或顧客編號<input name="who" autocomplete="username" placeholder="例如 C001" required></label>
+      <p class="field-error" id="login-error" role="alert"></p>
+      <button class="btn wide go" type="submit">登入</button>
+      ${quick.length ? `<div class="quick-login"><span>示範帳號</span>${quick.map((c) => `<button type="button" class="chip" data-login="${c.id}">${c.id}<small>${esc(c.email)}</small></button>`).join("")}</div>` : ""}
+    </form>`, "small");
+  const form = $("login-form");
+  const done = (id) => {
+    closeDialog();
+    setAccount(id);
+    toast(`已登入 ${id}`);
+    if (next) next();
+  };
+  form.querySelector("input").focus();
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = form.who.value.trim();
+    const c = db.customers.find((x) => x.id === v.toUpperCase() || x.email.toLowerCase() === v.toLowerCase());
+    if (!c) {
+      $("login-error").textContent = v ? "找不到這個帳號，請確認 Email 或顧客編號。" : "請輸入 Email 或顧客編號。";
+      form.who.focus();
+      return;
+    }
+    done(c.id);
+  });
+  form.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-login]");
+    if (b) done(b.dataset.login);
+  });
+}
+const requireLogin = (next) => {
+  if (account) return true;
+  openLogin(next);
+  return false;
+};
 
 function openDialog(html, cls = "") {
   const d = $("dialog");
@@ -180,7 +279,7 @@ function toast(text, kind = "", action) {
 
 let filter = "全部";
 const FAV = "收藏";
-const favKey = () => `shop_fav_${me()}`;
+const favKey = () => `shop_fav_${user()}`;
 const getFavs = () => new Set(local.get(favKey(), []));
 function toggleFav(pid) {
   const favs = getFavs();
@@ -195,6 +294,11 @@ document.addEventListener("click", (e) => {
   const h = e.target.closest("[data-fav]");
   if (!h) return;
   e.stopPropagation();
+  if (!account) {
+    if ($("dialog").open) closeDialog();
+    openLogin();
+    return;
+  }
   const on = toggleFav(h.dataset.fav);
   document.querySelectorAll(`[data-fav="${h.dataset.fav}"]`).forEach((b) => {
     b.classList.toggle("on", on);
@@ -259,7 +363,7 @@ function scoreFor(owned) {
 }
 
 function renderForYou() {
-  const owned = new Set(db.orders.filter((o) => o.customer === me()).flatMap((o) => o.items.map((i) => i.product)));
+  const owned = new Set(db.orders.filter((o) => o.customer === user()).flatMap((o) => o.items.map((i) => i.product)));
   let list = scoreFor(owned).slice(0, 4);
   if (list.length) {
     $("for-you-title").textContent = "你可能會喜歡";
@@ -397,7 +501,7 @@ function renderCart() {
   const lines = cartLines();
   const sub = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
   const ship = shippingOf(sub);
-  $("cart-customer").textContent = me();
+  $("cart-customer").textContent = user() || "未登入";
   $("cart-body").innerHTML = lines.length
     ? lines.map((l) => `<tr>
         <td><div class="cart-item"><img src="${img(l.p.key, l.color)}" alt=""><div><span>${esc(l.p.name)}</span><small>${colorByKey[l.color]?.name || l.color}・${esc(l.size)}</small></div></div></td>
@@ -440,8 +544,9 @@ $("cart-clear").addEventListener("click", async () => {
 });
 
 $("checkout").addEventListener("click", () => {
-  const c = customerById(me());
-  const last = db.orders.filter((o) => o.customer === me() && o.address).at(-1);
+  if (!requireLogin(() => $("checkout").click())) return;
+  const c = customerById(user());
+  const last = db.orders.filter((o) => o.customer === user() && o.address).at(-1);
   const lines = cartLines();
   const sub = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
   openDialog(`
@@ -480,7 +585,7 @@ async function submitOrder(e) {
   const lines = cartLines();
   try {
     const order = await Store.createOrder({
-      customer: me(), payment: data.payment, phone: data.phone.trim(), city: data.city,
+      customer: user(), payment: data.payment, phone: data.phone.trim(), city: data.city,
       address: data.address.trim(), note: data.note.trim(),
       items: lines.map((l) => ({ product: l.p.id, color: l.color, size: l.size, qty: l.qty, price: l.p.price })),
     });
@@ -559,8 +664,13 @@ $("o-body").addEventListener("keydown", (e) => {
 $("side-switch").addEventListener("click", () => showTab(document.body.dataset.side === "front" ? "orders" : "shop"));
 
 function renderMine() {
-  $("mine-title").textContent = `${me()} 的訂單`;
-  const list = db.orders.filter((o) => o.customer === me());
+  if (!account) {
+    $("mine-title").textContent = "我的訂單";
+    $("mine-body").innerHTML = `<tr><td colspan="5" class="empty">登入後就能看到你的訂單。<button class="btn-sm" data-login-open>登入</button></td></tr>`;
+    return;
+  }
+  $("mine-title").textContent = `${user()} 的訂單`;
+  const list = db.orders.filter((o) => o.customer === user());
   $("mine-body").innerHTML = list.length
     ? list.map((o) => `
       <tr class="clickable" data-order="${o.id}" tabindex="0">
@@ -571,6 +681,7 @@ function renderMine() {
     : `<tr><td colspan="5" class="empty">還沒有訂單，去逛逛吧。</td></tr>`;
 }
 $("mine-body").addEventListener("click", (e) => {
+  if (e.target.closest("[data-login-open]")) return openLogin();
   const r = e.target.closest("[data-order]");
   if (r) openOrder(r.dataset.order);
 });
@@ -1160,6 +1271,8 @@ function renderChurn() {
   }
   await reload();
   fillCustomerSelect();
+  if (account && !customerById(account)) account = null;
+  renderAccount();
   setCart(getCart());
   renderShop();
   if (new URLSearchParams(location.search).has("demo")) toggleDemo(true);
@@ -1175,10 +1288,10 @@ const setSource = (src) => {
   if (b && source !== src) b.click();
 };
 const DEMO = [
-  ["商品頁：3D 商品、收藏", () => { filter = "全部"; showTab("shop"); }],
+  ["登入與商品頁：3D 商品、收藏", () => { filter = "全部"; showTab("shop"); if (!account) openLogin(); }],
   ["籃球鞋：顏色尺寸、也買推薦", () => { showTab("shop"); openProduct("P06"); }],
   ["購物車與結帳", () => showTab("cart")],
-  ["我的訂單", () => showTab("mine")],
+  ["我的訂單", () => { if (!account) setAccount("C001"); showTab("mine"); }],
   ["後台：訂單管理與營收", () => showTab("orders")],
   ["顧客分群：C001 在哪一群", () => { setCustomer("C001"); showTab("segments"); setSource("shop"); }],
   ["商品推薦：相似度與命中率", () => { showTab("recommend"); setSource("shop"); }],

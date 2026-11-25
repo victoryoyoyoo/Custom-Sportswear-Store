@@ -631,3 +631,33 @@ select, input[type="search"], .form input, .form select, .form textarea { border
 @media (prefers-reduced-motion: reduce) { .done-icon { animation: none; } .pay-option span { transition: none; } }
 .toast { width: max-content; max-width: calc(100vw - 32px); }
 @media (max-width: 600px) { .toast.has-action { gap: 10px; font-size: 13px; } }
+
+body:not([data-side="back"]) .who { display: none; }
+.account { position: relative; }
+body[data-side="back"] .account { display: none; }
+.account-btn { font: inherit; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; background: none; border: 1px solid transparent; border-radius: 999px; padding: 4px 12px 4px 4px; color: var(--text); white-space: nowrap; }
+.account-btn:hover, .account-btn[aria-expanded="true"] { border-color: var(--line-strong); }
+.account-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.account-btn .avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); }
+.account-btn.signed-in .avatar { background: var(--accent-soft); color: var(--accent); }
+.account-btn .caret { color: var(--muted); }
+.account-menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 220px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(16, 24, 40, .14); padding: 6px; z-index: 20; animation: rise .16s ease; }
+.account-head { display: grid; padding: 10px 12px 12px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.account-head small { color: var(--muted); font-size: 12px; }
+.account-menu button { font: inherit; font-size: 14px; display: block; width: 100%; text-align: left; background: none; border: 0; border-radius: 8px; padding: 8px 12px; color: var(--text); cursor: pointer; }
+.account-menu button:hover, .account-menu button:focus-visible { background: var(--surface-2); outline: none; }
+.account-menu .out { color: var(--bad); }
+.login .muted { margin: -8px 0 18px; font-size: 13px; }
+.login .field-error { color: var(--bad); font-size: 13px; margin: -6px 0 6px; min-height: 0; }
+.login .field-error:empty { display: none; }
+.quick-login { display: grid; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.quick-login > span { font-size: 12px; color: var(--muted); }
+.quick-login .chip { font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: baseline; gap: 10px; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; color: var(--text); transition: border-color .2s ease, background .2s ease; }
+.quick-login .chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+.quick-login .chip small { font-weight: 400; color: var(--muted); font-size: 12px; }
+td.empty .btn-sm { margin-left: 10px; }
+@media (max-width: 600px) {
+  .account { order: 1; align-self: center; }
+  .account-btn { padding: 4px; }
+  .account-btn > span:not(.avatar), .account-btn .caret { display: none; }
+}
