@@ -417,3 +417,7 @@ body[data-side="back"] .side-switch { margin-left: auto; }
 .who.off { display: none; }
 body[data-side="back"] .who { margin-left: auto; }
 body[data-side="back"] .who + .cart-link + .side-switch { margin-left: 12px; }
+@media (max-width: 600px) {
+  #mine .block .table { min-width: 0; }
+  #mine .table th:nth-child(3), #mine .table td:nth-child(3) { display: none; }
+}
