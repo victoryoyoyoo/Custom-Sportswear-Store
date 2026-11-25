@@ -14,16 +14,16 @@ def find(rel, pattern):
 
 
 CRUD = [
-    ("新增商品", "管理 → 新增商品", r"function productForm", r"saveProduct", r"MapPost\(\"/products\"", r"INSERT INTO 商品 \("),
-    ("修改商品", "管理 → 編輯", r"function productForm", r"saveProduct", r"MapPut\(\"/products/", r"UPDATE 商品$"),
-    ("刪除商品", "管理 → 刪除", r"data-del-p", r"deleteProduct", r"MapDelete\(\"/products/", r"DELETE FROM 商品 WHERE"),
-    ("新增顧客", "管理 → 顧客管理 → 新增顧客", r"function customerForm", r"saveCustomer", r"MapPost\(\"/customers\"", r"INSERT INTO 顧客"),
-    ("修改顧客", "管理 → 顧客管理 → 編輯", r"function customerForm", r"saveCustomer", r"MapPut\(\"/customers/", r"UPDATE 顧客 SET"),
-    ("刪除顧客", "管理 → 顧客管理 → 刪除", r"data-del-c", r"deleteCustomer", r"MapDelete\(\"/customers/", r"DELETE FROM 顧客 WHERE"),
-    ("新增訂單（結帳）", "購物車 → 前往結帳 → 確認下單", r"async function submitOrder", r"createOrder", r"MapPost\(\"/orders\"", r"INSERT INTO 訂單 \("),
-    ("修改訂單狀態", "訂單 → 點一筆 → 狀態 → 儲存", r"od-save", r"updateOrder", r"MapMethods\(\"/orders/", r"UPDATE 訂單 SET 狀態"),
-    ("刪除訂單", "訂單 → 點一筆 → 刪除訂單", r"od-delete", r"deleteOrder", r"MapDelete\(\"/orders/", r"DELETE FROM 訂單 WHERE"),
-    ("讀取檢視表", "管理 → 檢視表", r"async function renderViews", r"async function view", r"MapGet\(\"/views/", r"public async Task<object> LoadViewAsync"),
+    ("新增商品", "後台 → 商品與顧客 → 新增商品", r"function productForm", r"saveProduct", r"MapPost\(\"/products\"", r"INSERT INTO 商品 \("),
+    ("修改商品", "後台 → 商品與顧客 → 編輯", r"function productForm", r"saveProduct", r"MapPut\(\"/products/", r"UPDATE 商品$"),
+    ("刪除商品", "後台 → 商品與顧客 → 刪除", r"data-del-p", r"deleteProduct", r"MapDelete\(\"/products/", r"DELETE FROM 商品 WHERE"),
+    ("新增顧客", "後台 → 商品與顧客 → 顧客管理 → 新增顧客", r"function customerForm", r"saveCustomer", r"MapPost\(\"/customers\"", r"INSERT INTO 顧客"),
+    ("修改顧客", "後台 → 商品與顧客 → 顧客管理 → 編輯", r"function customerForm", r"saveCustomer", r"MapPut\(\"/customers/", r"UPDATE 顧客 SET"),
+    ("刪除顧客", "後台 → 商品與顧客 → 顧客管理 → 刪除", r"data-del-c", r"deleteCustomer", r"MapDelete\(\"/customers/", r"DELETE FROM 顧客 WHERE"),
+    ("新增訂單（結帳）", "前台 → 購物車 → 前往結帳 → 確認下單", r"async function submitOrder", r"createOrder", r"MapPost\(\"/orders\"", r"INSERT INTO 訂單 \("),
+    ("修改訂單狀態", "後台 → 訂單管理 → 點一筆 → 狀態 → 儲存", r"od-save", r"updateOrder", r"MapMethods\(\"/orders/", r"UPDATE 訂單 SET 狀態"),
+    ("刪除訂單", "後台 → 訂單管理 → 點一筆 → 刪除訂單", r"od-delete", r"deleteOrder", r"MapDelete\(\"/orders/", r"DELETE FROM 訂單 WHERE"),
+    ("讀取檢視表", "後台 → 商品與顧客 → 檢視表", r"async function renderViews", r"async function view", r"MapGet\(\"/views/", r"public async Task<object> LoadViewAsync"),
     ("查詢全部資料", "打開網頁時", r"async function reload", r"async function all", r"MapGet\(\"/all\"", r"SELECT 商品.商品編號, 商品.圖片代碼"),
 ]
 

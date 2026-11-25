@@ -80,6 +80,9 @@ function recompute() {
 document.querySelectorAll(".nav-item").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
 
 function showTab(name) {
+  const side = document.querySelector(`.nav-item[data-tab="${name}"]`)?.dataset.side || "front";
+  document.body.dataset.side = side;
+  $("side-switch").textContent = side === "front" ? "進入後台" : "回到商店";
   document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.tab === name));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === name));
   window.scrollTo(0, 0);
@@ -87,7 +90,7 @@ function showTab(name) {
 }
 
 function renderTab(name) {
-  ({ shop: renderShop, cart: renderCart, orders: renderOrders, admin: renderAdmin }[name] || (() => {}))();
+  ({ shop: renderShop, cart: renderCart, mine: renderMine, orders: renderOrders, admin: renderAdmin }[name] || (() => {}))();
   if (name === "segments" && !drawn.segments) renderSegments();
   if (name === "recommend" && !drawn.recommend) renderRecommend();
   if (name === "churn" && !drawn.churn) renderChurn();
@@ -409,7 +412,7 @@ async function submitOrder(e) {
         <p class="muted">${!before ? `這是 ${name} 的第一筆訂單，之後買得越多，分群和推薦會越準。` : before !== after ? `${name} 的顧客分群從「${before}」變成「${after}」。` : `${name} 目前屬於「${after}」。`}</p>
         <div class="actions end"><button class="ghost" id="done-orders">查看訂單</button><button class="btn" id="done-shop">繼續購物</button></div>
       </div>`, "small");
-    $("done-orders").onclick = () => { closeDialog(); showTab("orders"); openOrder(order.id); };
+    $("done-orders").onclick = () => { closeDialog(); showTab("mine"); openOrder(order.id); };
     $("done-shop").onclick = () => { closeDialog(); showTab("shop"); };
     renderCart();
   } catch (err) {
@@ -430,7 +433,9 @@ function renderOrders() {
   const months = {};
   valid.forEach((o) => (months[o.date.slice(0, 7)] = (months[o.date.slice(0, 7)] || 0) + orderTotal(o)));
   const keys = Object.keys(months).sort();
-  Charts.line($("o-chart"), keys.map((k) => k.replace("-", "/")), [{ label: "營收", values: keys.map((k) => months[k]), color: "a" }], { yMoney: true });
+  const lastDay = new Date(Number(TODAY.slice(0, 4)), Number(TODAY.slice(5, 7)), 0).getDate();
+  const label = (k) => (k === TODAY.slice(0, 7) && Number(TODAY.slice(8)) < lastDay ? `${k.replace("-", "/")}（到 ${Number(TODAY.slice(8))} 日）` : k.replace("-", "/"));
+  Charts.line($("o-chart"), keys.map(label), [{ label: "營收", values: keys.map((k) => months[k]), color: "a" }], { yMoney: true });
   renderOrderTable();
 }
 
@@ -468,6 +473,30 @@ $("o-body").addEventListener("keydown", (e) => {
   if (r && e.key === "Enter") openOrder(r.dataset.order);
 });
 
+$("side-switch").addEventListener("click", () => showTab(document.body.dataset.side === "front" ? "orders" : "shop"));
+
+function renderMine() {
+  const name = customerById(me())?.name || "";
+  $("mine-title").textContent = `${name} 的訂單`;
+  const list = db.orders.filter((o) => o.customer === me());
+  $("mine-body").innerHTML = list.length
+    ? list.map((o) => `
+      <tr class="clickable" data-order="${o.id}" tabindex="0">
+        <td>${o.id}</td><td>${o.date}</td>
+        <td class="ellipsis">${o.items.map((i) => `${esc(productById(i.product)?.name || i.product)} ×${i.qty}`).join("、")}</td>
+        <td class="num">${money(orderTotal(o) + shippingOf(orderTotal(o)))}</td><td><span class="status s${STATUSES.indexOf(o.status)}">${o.status}</span></td>
+      </tr>`).join("")
+    : `<tr><td colspan="5" class="empty">還沒有訂單，去逛逛吧。</td></tr>`;
+}
+$("mine-body").addEventListener("click", (e) => {
+  const r = e.target.closest("[data-order]");
+  if (r) openOrder(r.dataset.order);
+});
+$("mine-body").addEventListener("keydown", (e) => {
+  const r = e.target.closest("[data-order]");
+  if (r && e.key === "Enter") openOrder(r.dataset.order);
+});
+
 function openOrder(id) {
   const o = db.orders.find((x) => x.id === id);
   if (!o) return;
@@ -485,11 +514,12 @@ function openOrder(id) {
         ${o.items.map((i) => `<tr><td>${esc(productById(i.product)?.name || i.product)}</td><td>${colorByKey[i.color]?.name || i.color}／${esc(i.size)}</td><td class="num">${money(i.price)}</td><td class="num">${i.qty}</td><td class="num">${money(i.price * i.qty)}</td></tr>`).join("")}
       </tbody></table>
       <dl class="sum"><dt>商品金額</dt><dd>${money(sub)}</dd><dt>運費</dt><dd>${shippingOf(sub) ? money(shippingOf(sub)) : "免運"}</dd><dt class="total">總計</dt><dd class="total">${money(sub + shippingOf(sub))}</dd></dl>
-      <div class="actions between">
+      ${document.body.dataset.side === "back" ? `<div class="actions between">
         <button class="ghost danger-text" id="od-delete">刪除訂單</button>
         <div class="actions"><label class="inline">狀態 <select id="od-status">${STATUSES.map((s) => `<option ${s === o.status ? "selected" : ""}>${s}</option>`).join("")}</select></label><button class="btn" id="od-save">儲存</button></div>
-      </div>
+      </div>` : `<p class="muted">訂單狀態：${o.status}</p>`}
     </div>`, "wide");
+  if (document.body.dataset.side !== "back") return;
   $("od-save").onclick = async () => {
     const status = $("od-status").value;
     await Store.updateOrder(o.id, { status });

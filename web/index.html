@@ -8,22 +8,22 @@
   <link rel="icon" href="img/p/jersey_royal.webp">
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-side="front">
   <header class="topbar">
     <div class="topbar-inner">
-      <strong class="store">運動用品商店</strong>
+      <strong class="store">運動用品商店<span class="side-tag" data-side="back">後台</span></strong>
       <nav class="nav" aria-label="功能">
-        <button class="nav-item active" data-tab="shop">商品</button>
-        <button class="nav-item" data-tab="cart">購物車 <span id="cart-count" class="badge"></span></button>
-        <button class="nav-item" data-tab="orders">訂單</button>
-        <span class="nav-sep" aria-hidden="true"></span>
-        <button class="nav-item" data-tab="segments">顧客分群</button>
-        <button class="nav-item" data-tab="recommend">商品推薦</button>
-        <button class="nav-item" data-tab="churn">流失預測</button>
-        <span class="nav-sep" aria-hidden="true"></span>
-        <button class="nav-item" data-tab="admin">管理</button>
+        <button class="nav-item active" data-tab="shop" data-side="front">商品</button>
+        <button class="nav-item" data-tab="cart" data-side="front">購物車 <span id="cart-count" class="badge"></span></button>
+        <button class="nav-item" data-tab="mine" data-side="front">我的訂單</button>
+        <button class="nav-item" data-tab="orders" data-side="back">訂單管理</button>
+        <button class="nav-item" data-tab="segments" data-side="back">顧客分群</button>
+        <button class="nav-item" data-tab="recommend" data-side="back">商品推薦</button>
+        <button class="nav-item" data-tab="churn" data-side="back">流失預測</button>
+        <button class="nav-item" data-tab="admin" data-side="back">商品與顧客</button>
       </nav>
-      <label class="who">目前顧客 <select id="customer" aria-label="目前顧客"></select></label>
+      <label class="who" data-side="front">示範登入 <select id="customer" aria-label="示範登入的顧客"></select></label>
+      <button class="side-switch" id="side-switch" type="button">進入後台</button>
     </div>
   </header>
 
@@ -105,6 +105,18 @@
           <tbody id="o-body"></tbody>
         </table>
         <div class="pager"><button class="ghost" id="o-prev">上一頁</button><span id="o-page"></span><button class="ghost" id="o-next">下一頁</button></div>
+      </div>
+    </section>
+
+    <section id="mine" class="panel">
+      <div class="block">
+        <div class="block-head">
+          <h2 id="mine-title">我的訂單</h2>
+        </div>
+        <table class="table">
+          <thead><tr><th>訂單</th><th>日期</th><th>商品</th><th class="num">金額</th><th>狀態</th></tr></thead>
+          <tbody id="mine-body"></tbody>
+        </table>
       </div>
     </section>
 

@@ -74,7 +74,6 @@ body {
 .nav-item:hover { color: var(--text); }
 .nav-item.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
 .nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.nav-sep { width: 1px; background: var(--line); margin: 14px 10px; }
 .badge:not(:empty) { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: var(--surface); font-size: 12px; line-height: 18px; text-align: center; font-weight: 700; }
 .who { font-size: 13px; color: var(--muted); white-space: nowrap; display: flex; align-items: center; gap: 8px; }
 
@@ -212,7 +211,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
   .who { margin-left: auto; }
   .nav { order: 3; flex-basis: 100%; overflow-x: auto; }
   .nav-item { padding: 10px; }
-  .nav-sep { margin: 10px 4px; }
   main { padding: 18px 16px; }
   .split, .split.rev, .grid-2 { grid-template-columns: 1fr; }
   .kpis { grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -363,3 +361,12 @@ h2.sub { margin-top: 20px; }
 
 pre.sql { font: 13px/1.5 Consolas, "Courier New", monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; margin: 0 0 14px; overflow-x: auto; white-space: pre-wrap; }
 .table-wrap { overflow-x: auto; }
+
+body[data-side="front"] [data-side="back"], body[data-side="back"] [data-side="front"] { display: none; }
+.side-tag { margin-left: 8px; font-size: 12px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); border-radius: 3px; padding: 1px 6px; vertical-align: 2px; }
+.side-switch { font: inherit; font-size: 13px; cursor: pointer; background: transparent; color: var(--text); border: 1px solid var(--line-strong); border-radius: 4px; padding: 6px 12px; margin-left: 12px; white-space: nowrap; align-self: center; }
+.side-switch:hover { border-color: var(--accent); color: var(--accent); }
+body[data-side="back"] .side-switch { margin-left: auto; }
+@media (max-width: 960px) {
+  .side-switch { margin-left: 8px; padding: 5px 10px; }
+}
